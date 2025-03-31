@@ -1,593 +1,559 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
-import os
-import json
-import random
-import time
+import sqlite3
 from datetime import datetime
 
-class User:
-    def __init__(self, username, password, role):
-        self.username = username
-        self.password = password
-        self.role = role  # 'student' or 'instructor'
+# -----------------------------
+# Database Setup using SQLite
+# -----------------------------
+conn = sqlite3.connect("student_grades.db")
+cursor = conn.cursor()
 
-class Question:
-    def __init__(self, question_text, options, correct_answer):
-        self.question_text = question_text
-        self.options = options
-        self.correct_answer = correct_answer
+def init_db():
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Student (
+                        student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        email TEXT UNIQUE NOT NULL)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Course (
+                        course_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        course_name TEXT NOT NULL UNIQUE,
+                        credits INTEGER NOT NULL)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Grade (
+                        grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER NOT NULL,
+                        course_id INTEGER NOT NULL,
+                        semester INTEGER NOT NULL,
+                        grade_point REAL NOT NULL,
+                        FOREIGN KEY (student_id) REFERENCES Student(student_id),
+                        FOREIGN KEY (course_id) REFERENCES Course(course_id))''')
+    conn.commit()
 
-class Exam:
-    def __init__(self, title, duration, questions=None):
-        self.title = title
-        self.duration = duration  # in minutes
-        self.questions = questions if questions else []
+init_db()
 
-class ExamResult:
-    def __init__(self, username, exam_title, score, date):
-        self.username = username
-        self.exam_title = exam_title
-        self.score = score
-        self.date = date
+# -----------------------------
+# Tkinter GUI Application
+# -----------------------------
+root = tk.Tk()
+root.title("CGPA Calculator System")
+root.geometry("900x600")
 
-class ExamSystemData:
-    def __init__(self):
-        self.users = []
-        self.exams = []
-        self.results = []
-        self.load_data()
+notebook = ttk.Notebook(root)
+notebook.pack(fill='both', expand=True)
 
-    def load_data(self):
-        # Create data directory if it doesn't exist
-        if not os.path.exists("data"):
-            os.makedirs("data")
-            
-        # Load users
-        if os.path.exists("data/users.json"):
-            with open("data/users.json", "r") as f:
-                user_data = json.load(f)
-                self.users = [User(u["username"], u["password"], u["role"]) for u in user_data]
-        else:
-            # Create default admin user
-            self.users = [User("admin", "admin123", "instructor")]
-            self.save_users()
-        
-        # Load exams
-        if os.path.exists("data/exams.json"):
-            with open("data/exams.json", "r") as f:
-                exam_data = json.load(f)
-                self.exams = []
-                for e in exam_data:
-                    questions = [Question(q["question_text"], q["options"], q["correct_answer"]) 
-                                 for q in e["questions"]]
-                    self.exams.append(Exam(e["title"], e["duration"], questions))
-        
-        # Load results
-        if os.path.exists("data/results.json"):
-            with open("data/results.json", "r") as f:
-                result_data = json.load(f)
-                self.results = [ExamResult(r["username"], r["exam_title"], r["score"], r["date"]) 
-                                for r in result_data]
+# -------------
+# Student Tab
+# -------------
+student_frame = ttk.Frame(notebook)
+notebook.add(student_frame, text="Students")
 
-    def save_users(self):
-        user_data = [{"username": u.username, "password": u.password, "role": u.role} 
-                     for u in self.users]
-        with open("data/users.json", "w") as f:
-            json.dump(user_data, f)
-    
-    def save_exams(self):
-        exam_data = []
-        for e in self.exams:
-            question_data = [{"question_text": q.question_text, "options": q.options, 
-                              "correct_answer": q.correct_answer} for q in e.questions]
-            exam_data.append({"title": e.title, "duration": e.duration, "questions": question_data})
-        with open("data/exams.json", "w") as f:
-            json.dump(exam_data, f)
-    
-    def save_results(self):
-        result_data = [{"username": r.username, "exam_title": r.exam_title, 
-                        "score": r.score, "date": r.date} for r in self.results]
-        with open("data/results.json", "w") as f:
-            json.dump(result_data, f)
-    
-    def authenticate(self, username, password):
-        for user in self.users:
-            if user.username == username and user.password == password:
-                return user
-        return None
+student_tree = ttk.Treeview(student_frame, columns=("ID", "Name", "Email"), show="headings")
+for col in ("ID", "Name", "Email"):
+    student_tree.heading(col, text=col)
+student_tree.pack(fill="both", expand=True, padx=10, pady=10)
 
-    def add_user(self, username, password, role):
-        # Check if username already exists
-        for user in self.users:
-            if user.username == username:
-                return False
-        
-        # Add new user
-        self.users.append(User(username, password, role))
-        self.save_users()
-        return True
+def refresh_student_tree():
+    for row in student_tree.get_children():
+        student_tree.delete(row)
+    cursor.execute("SELECT * FROM Student")
+    for row in cursor.fetchall():
+        student_tree.insert("", "end", values=row)
 
-    def add_exam(self, title, duration, questions):
-        # Check if exam title already exists
-        for exam in self.exams:
-            if exam.title == title:
-                return False
-        
-        # Add new exam
-        self.exams.append(Exam(title, duration, questions))
-        self.save_exams()
-        return True
+def add_student():
+    popup = tk.Toplevel(root)
+    popup.title("Add Student")
 
-    def add_result(self, username, exam_title, score):
-        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.results.append(ExamResult(username, exam_title, score, date))
-        self.save_results()
+    tk.Label(popup, text="Name:").grid(row=0, column=0, padx=5, pady=5)
+    name_entry = tk.Entry(popup)
+    name_entry.grid(row=0, column=1, padx=5, pady=5)
 
-class OnlineExamSystemGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Online Exam Management System")
-        self.root.geometry("800x600")
-        self.root.configure(bg="#f0f0f0")
-        
-        self.data = ExamSystemData()
-        self.current_user = None
-        
-        self.setup_login_frame()
-    
-    def setup_login_frame(self):
-        # Clear window
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        
-        # Create login frame
-        login_frame = tk.Frame(self.root, bg="#f0f0f0")
-        login_frame.pack(pady=100)
-        
-        # Title
-        title_label = tk.Label(login_frame, text="Online Exam Management System", 
-                              font=("Arial", 18, "bold"), bg="#f0f0f0")
-        title_label.grid(row=0, column=0, columnspan=2, pady=20)
-        
-        # Username
-        username_label = tk.Label(login_frame, text="Username:", bg="#f0f0f0", font=("Arial", 12))
-        username_label.grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        self.username_entry = tk.Entry(login_frame, font=("Arial", 12))
-        self.username_entry.grid(row=1, column=1, padx=10, pady=10)
-        
-        # Password
-        password_label = tk.Label(login_frame, text="Password:", bg="#f0f0f0", font=("Arial", 12))
-        password_label.grid(row=2, column=0, padx=10, pady=10, sticky="e")
-        self.password_entry = tk.Entry(login_frame, show="*", font=("Arial", 12))
-        self.password_entry.grid(row=2, column=1, padx=10, pady=10)
-        
-        # Login button
-        login_button = tk.Button(login_frame, text="Login", command=self.login, 
-                                font=("Arial", 12), bg="#4CAF50", fg="white", width=10)
-        login_button.grid(row=3, column=0, columnspan=2, pady=20)
-        
-        # Register button
-        register_button = tk.Button(login_frame, text="Register", command=self.show_register, 
-                                   font=("Arial", 12), bg="#2196F3", fg="white", width=10)
-        register_button.grid(row=4, column=0, columnspan=2, pady=5)
-    
-    def login(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        
-        if not username or not password:
-            messagebox.showerror("Login Error", "Username and password are required")
-            return
-        
-        user = self.data.authenticate(username, password)
-        if user:
-            self.current_user = user
-            messagebox.showinfo("Login Success", f"Welcome, {username}!")
-            if user.role == "instructor":
-                self.setup_instructor_dashboard()
-            else:
-                self.setup_student_dashboard()
-        else:
-            messagebox.showerror("Login Error", "Invalid username or password")
-    
-    def show_register(self):
-        register_window = tk.Toplevel(self.root)
-        register_window.title("Register")
-        register_window.geometry("400x300")
-        register_window.configure(bg="#f0f0f0")
-        
-        # Username
-        username_label = tk.Label(register_window, text="Username:", bg="#f0f0f0", font=("Arial", 12))
-        username_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
-        username_entry = tk.Entry(register_window, font=("Arial", 12))
-        username_entry.grid(row=0, column=1, padx=10, pady=10)
-        
-        # Password
-        password_label = tk.Label(register_window, text="Password:", bg="#f0f0f0", font=("Arial", 12))
-        password_label.grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        password_entry = tk.Entry(register_window, show="*", font=("Arial", 12))
-        password_entry.grid(row=1, column=1, padx=10, pady=10)
-        
-        # Role
-        role_label = tk.Label(register_window, text="Role:", bg="#f0f0f0", font=("Arial", 12))
-        role_label.grid(row=2, column=0, padx=10, pady=10, sticky="e")
-        role_var = tk.StringVar(value="student")
-        role_student = tk.Radiobutton(register_window, text="Student", variable=role_var, 
-                                     value="student", bg="#f0f0f0", font=("Arial", 12))
-        role_student.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-        role_instructor = tk.Radiobutton(register_window, text="Instructor", variable=role_var, 
-                                        value="instructor", bg="#f0f0f0", font=("Arial", 12))
-        role_instructor.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-        
-        # Register button
-        def register():
-            username = username_entry.get()
-            password = password_entry.get()
-            role = role_var.get()
-            
-            if not username or not password:
-                messagebox.showerror("Registration Error", "Username and password are required")
-                return
-            
-            if self.data.add_user(username, password, role):
-                messagebox.showinfo("Registration Success", "User registered successfully")
-                register_window.destroy()
-            else:
-                messagebox.showerror("Registration Error", "Username already exists")
-        
-        register_button = tk.Button(register_window, text="Register", command=register, 
-                                   font=("Arial", 12), bg="#4CAF50", fg="white", width=10)
-        register_button.grid(row=4, column=0, columnspan=2, pady=20)
-    
-    def setup_instructor_dashboard(self):
-        # Clear window
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        
-        # Create menu frame
-        menu_frame = tk.Frame(self.root, bg="#333333", height=50)
-        menu_frame.pack(fill="x")
-        
-        # Menu buttons
-        create_exam_btn = tk.Button(menu_frame, text="Create Exam", command=self.show_create_exam,
-                                  font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        create_exam_btn.pack(side="left", padx=20, pady=10)
-        
-        view_exams_btn = tk.Button(menu_frame, text="View Exams", command=self.show_view_exams,
-                                 font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        view_exams_btn.pack(side="left", padx=20, pady=10)
-        
-        view_results_btn = tk.Button(menu_frame, text="View Results", command=self.show_view_results,
-                                   font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        view_results_btn.pack(side="left", padx=20, pady=10)
-        
-        logout_btn = tk.Button(menu_frame, text="Logout", command=self.logout,
-                             font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        logout_btn.pack(side="right", padx=20, pady=10)
-        
-        # Dashboard content
-        dashboard_frame = tk.Frame(self.root, bg="#f0f0f0")
-        dashboard_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        welcome_label = tk.Label(dashboard_frame, text=f"Welcome, {self.current_user.username}!", 
-                               font=("Arial", 18, "bold"), bg="#f0f0f0")
-        welcome_label.pack(pady=20)
-        
-        # Stats
-        stats_frame = tk.Frame(dashboard_frame, bg="white", bd=1, relief="solid")
-        stats_frame.pack(fill="x", padx=50, pady=20)
-        
-        num_exams = len(self.data.exams)
-        num_students = sum(1 for user in self.data.users if user.role == "student")
-        num_results = len(self.data.results)
-        
-        tk.Label(stats_frame, text=f"Total Exams: {num_exams}", font=("Arial", 14), bg="white").pack(pady=10)
-        tk.Label(stats_frame, text=f"Total Students: {num_students}", font=("Arial", 14), bg="white").pack(pady=10)
-        tk.Label(stats_frame, text=f"Total Results: {num_results}", font=("Arial", 14), bg="white").pack(pady=10)
-    
-    def setup_student_dashboard(self):
-        # Clear window
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        
-        # Create menu frame
-        menu_frame = tk.Frame(self.root, bg="#333333", height=50)
-        menu_frame.pack(fill="x")
-        
-        # Menu buttons
-        take_exam_btn = tk.Button(menu_frame, text="Take Exam", command=self.show_take_exam,
-                                font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        take_exam_btn.pack(side="left", padx=20, pady=10)
-        
-        view_results_btn = tk.Button(menu_frame, text="View Results", command=self.show_view_student_results,
-                                   font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        view_results_btn.pack(side="left", padx=20, pady=10)
-        
-        logout_btn = tk.Button(menu_frame, text="Logout", command=self.logout,
-                             font=("Arial", 12), bg="#333333", fg="white", bd=0)
-        logout_btn.pack(side="right", padx=20, pady=10)
-        
-        # Dashboard content
-        dashboard_frame = tk.Frame(self.root, bg="#f0f0f0")
-        dashboard_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        welcome_label = tk.Label(dashboard_frame, text=f"Welcome, {self.current_user.username}!", 
-                               font=("Arial", 18, "bold"), bg="#f0f0f0")
-        welcome_label.pack(pady=20)
-        
-        # Available exams
-        available_exams_label = tk.Label(dashboard_frame, text="Available Exams:", 
-                                       font=("Arial", 14, "bold"), bg="#f0f0f0")
-        available_exams_label.pack(pady=10, anchor="w", padx=50)
-        
-        exams_frame = tk.Frame(dashboard_frame, bg="white", bd=1, relief="solid")
-        exams_frame.pack(fill="x", padx=50, pady=10)
-        
-        if not self.data.exams:
-            tk.Label(exams_frame, text="No exams available", font=("Arial", 12), bg="white").pack(pady=10)
-        else:
-            for i, exam in enumerate(self.data.exams):
-                exam_frame = tk.Frame(exams_frame, bg="white")
-                exam_frame.pack(fill="x", padx=10, pady=5)
-                
-                tk.Label(exam_frame, text=f"{i+1}. {exam.title}", font=("Arial", 12), bg="white").pack(side="left")
-                tk.Label(exam_frame, text=f"Duration: {exam.duration} minutes", 
-                       font=("Arial", 12), bg="white").pack(side="left", padx=20)
-                tk.Label(exam_frame, text=f"Questions: {len(exam.questions)}", 
-                       font=("Arial", 12), bg="white").pack(side="left", padx=20)
-    
-    def logout(self):
-        self.current_user = None
-        self.setup_login_frame()
-    
-    def show_create_exam(self):
-        if self.current_user.role != "instructor":
-            messagebox.showerror("Error", "Only instructors can create exams")
-            return
-        
-        create_exam_window = tk.Toplevel(self.root)
-        create_exam_window.title("Create Exam")
-        create_exam_window.geometry("800x600")
-        create_exam_window.configure(bg="#f0f0f0")
-        
-        title_label = tk.Label(create_exam_window, text="Create New Exam", 
-                              font=("Arial", 18, "bold"), bg="#f0f0f0")
-        title_label.pack(pady=20)
-        
-        form_frame = tk.Frame(create_exam_window, bg="#f0f0f0")
-        form_frame.pack(fill="both", padx=50, pady=10)
-        
-        # Exam title
-        title_label = tk.Label(form_frame, text="Exam Title:", bg="#f0f0f0", font=("Arial", 12))
-        title_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
-        title_entry = tk.Entry(form_frame, font=("Arial", 12), width=40)
-        title_entry.grid(row=0, column=1, padx=10, pady=10, sticky="w")
-        
-        # Duration
-        duration_label = tk.Label(form_frame, text="Duration (minutes):", bg="#f0f0f0", font=("Arial", 12))
-        duration_label.grid(row=1, column=0, padx=10, pady=10, sticky="e")
-        duration_entry = tk.Entry(form_frame, font=("Arial", 12), width=10)
-        duration_entry.grid(row=1, column=1, padx=10, pady=10, sticky="w")
-        
-        # Questions
-        questions_label = tk.Label(form_frame, text="Questions:", bg="#f0f0f0", font=("Arial", 12))
-        questions_label.grid(row=2, column=0, padx=10, pady=10, sticky="ne")
-        
-        questions_frame = tk.Frame(form_frame, bg="white", bd=1, relief="solid", width=500, height=300)
-        questions_frame.grid(row=2, column=1, padx=10, pady=10, sticky="w")
-        questions_frame.pack_propagate(False)
-        
-        questions_canvas = tk.Canvas(questions_frame, bg="white")
-        questions_canvas.pack(side="left", fill="both", expand=True)
-        
-        scrollbar = ttk.Scrollbar(questions_frame, orient="vertical", command=questions_canvas.yview)
-        scrollbar.pack(side="right", fill="y")
-        
-        questions_canvas.configure(yscrollcommand=scrollbar.set)
-        
-        questions_inner_frame = tk.Frame(questions_canvas, bg="white")
-        questions_canvas.create_window((0, 0), window=questions_inner_frame, anchor="nw")
-        
-        questions = []
-        
-        def add_question():
-            question_window = tk.Toplevel(create_exam_window)
-            question_window.title("Add Question")
-            question_window.geometry("600x400")
-            question_window.configure(bg="#f0f0f0")
-            
-            # Question text
-            q_text_label = tk.Label(question_window, text="Question:", bg="#f0f0f0", font=("Arial", 12))
-            q_text_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
-            q_text_entry = tk.Entry(question_window, font=("Arial", 12), width=50)
-            q_text_entry.grid(row=0, column=1, padx=10, pady=10, sticky="w")
-            
-            # Options
-            options_frame = tk.Frame(question_window, bg="#f0f0f0")
-            options_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
-            
-            option_entries = []
-            for i in range(4):
-                tk.Label(options_frame, text=f"Option {i+1}:", bg="#f0f0f0", font=("Arial", 12)).grid(
-                    row=i, column=0, padx=10, pady=5, sticky="e")
-                option_entry = tk.Entry(options_frame, font=("Arial", 12), width=40)
-                option_entry.grid(row=i, column=1, padx=10, pady=5, sticky="w")
-                option_entries.append(option_entry)
-            
-            # Correct answer
-            correct_label = tk.Label(question_window, text="Correct Answer:", bg="#f0f0f0", font=("Arial", 12))
-            correct_label.grid(row=2, column=0, padx=10, pady=10, sticky="e")
-            correct_var = tk.IntVar(value=0)
-            for i in range(4):
-                tk.Radiobutton(question_window, text=f"Option {i+1}", variable=correct_var, 
-                               value=i, bg="#f0f0f0", font=("Arial", 12)).grid(
-                    row=2+i, column=1, padx=10, pady=5, sticky="w")
-            
-            # Save button
-            def save_question():
-                question_text = q_text_entry.get()
-                options = [option.get() for option in option_entries]
-                correct_answer = correct_var.get()
-                
-                if not question_text or not all(options) or correct_answer is None:
-                    messagebox.showerror("Error", "All fields are required")
-                    return
-                
-                questions.append(Question(question_text, options, correct_answer))
-                update_questions_display()
-                question_window.destroy()
-            
-            save_button = tk.Button(question_window, text="Save Question", command=save_question, 
-                                   font=("Arial", 12), bg="#4CAF50", fg="white", width=15)
-            save_button.grid(row=6, column=0, columnspan=2, pady=20)
-        
-        def update_questions_display():
-            # Clear existing questions
-            for widget in questions_inner_frame.winfo_children():
-                widget.destroy()
-            
-            if not questions:
-                tk.Label(questions_inner_frame, text="No questions added yet", 
-                       font=("Arial", 12), bg="white").pack(pady=10)
-            else:
-                for i, question in enumerate(questions):
-                    question_frame = tk.Frame(questions_inner_frame, bg="white")
-                    question_frame.pack(fill="x", padx=5, pady=5)
-                    
-                    tk.Label(question_frame, text=f"Q{i+1}: {question.question_text}", 
-                           font=("Arial", 12), bg="white").pack(anchor="w")
-                    
-                    # Delete button
-                    def make_delete_func(index):
-                        return lambda: delete_question(index)
-                    
-                    delete_btn = tk.Button(question_frame, text="Delete", 
-                                         command=make_delete_func(i),
-                                         font=("Arial", 10), bg="#f44336", fg="white")
-                    delete_btn.pack(side="right")
-            
-            questions_inner_frame.update_idletasks()
-            questions_canvas.configure(scrollregion=questions_canvas.bbox("all"))
-        
-        def delete_question(index):
-            questions.pop(index)
-            update_questions_display()
-        
-        # Add question button
-        add_question_btn = tk.Button(form_frame, text="Add Question", command=add_question, 
-                                   font=("Arial", 12), bg="#2196F3", fg="white", width=15)
-        add_question_btn.grid(row=3, column=1, padx=10, pady=10, sticky="w")
-        
-        update_questions_display()
-        
-        # Save exam button
-        def save_exam():
-            title = title_entry.get()
-            duration = duration_entry.get()
-            
-            if not title or not duration or not questions:
-                messagebox.showerror("Error", "All fields are required and at least one question must be added")
-                return
-            
+    tk.Label(popup, text="Email:").grid(row=1, column=0, padx=5, pady=5)
+    email_entry = tk.Entry(popup)
+    email_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    def submit():
+        name = name_entry.get()
+        email = email_entry.get()
+        if name and email:
             try:
-                duration = int(duration)
-            except ValueError:
-                messagebox.showerror("Error", "Duration must be a number")
-                return
-            
-            if self.data.add_exam(title, duration, questions):
-                messagebox.showinfo("Success", "Exam created successfully")
-                create_exam_window.destroy()
-            else:
-                messagebox.showerror("Error", "An exam with this title already exists")
-        
-        save_exam_btn = tk.Button(create_exam_window, text="Save Exam", command=save_exam, 
-                                 font=("Arial", 14), bg="#4CAF50", fg="white", width=15)
-        save_exam_btn.pack(pady=20)
-    
-    def show_view_exams(self):
-        if self.current_user.role != "instructor":
-            messagebox.showerror("Error", "Only instructors can view exams")
-            return
-        
-        view_exams_window = tk.Toplevel(self.root)
-        view_exams_window.title("View Exams")
-        view_exams_window.geometry("800x600")
-        view_exams_window.configure(bg="#f0f0f0")
-        
-        title_label = tk.Label(view_exams_window, text="All Exams", 
-                              font=("Arial", 18, "bold"), bg="#f0f0f0")
-        title_label.pack(pady=20)
-        
-        exams_frame = tk.Frame(view_exams_window, bg="white", bd=1, relief="solid")
-        exams_frame.pack(fill="both", expand=True, padx=50, pady=20)
-        
-        if not self.data.exams:
-            tk.Label(exams_frame, text="No exams available", font=("Arial", 12), bg="white").pack(pady=10)
+                cursor.execute("INSERT INTO Student (name, email) VALUES (?, ?)", 
+                               (name, email))
+                conn.commit()
+                refresh_student_tree()
+                popup.destroy()
+            except sqlite3.IntegrityError as e:
+                messagebox.showerror("Error", f"Could not add student: {e}")
         else:
-            for i, exam in enumerate(self.data.exams):
-                exam_frame = tk.Frame(exams_frame, bg="white", bd=1, relief="solid")
-                exam_frame.pack(fill="x", padx=10, pady=10)
-                
-                tk.Label(exam_frame, text=f"{i+1}. {exam.title}", 
-                       font=("Arial", 14, "bold"), bg="white").pack(anchor="w", padx=10, pady=5)
-                tk.Label(exam_frame, text=f"Duration: {exam.duration} minutes", 
-                       font=("Arial", 12), bg="white").pack(anchor="w", padx=10, pady=2)
-                tk.Label(exam_frame, text=f"Questions: {len(exam.questions)}", 
-                       font=("Arial", 12), bg="white").pack(anchor="w", padx=10, pady=2)
-                
-                # View questions button
-                def make_view_questions_func(exam_index):
-                    return lambda: self.show_exam_questions(exam_index)
-                
-                view_questions_btn = tk.Button(exam_frame, text="View Questions", 
-                                             command=make_view_questions_func(i),
-                                             font=("Arial", 12), bg="#2196F3", fg="white")
-                view_questions_btn.pack(anchor="w", padx=10, pady=5)
+            messagebox.showwarning("Input Error", "All fields are required.")
+
+    tk.Button(popup, text="Add", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+
+def update_student():
+    selected = student_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Student", "Please select a student to update.")
+        return
+    record = student_tree.item(selected, "values")
+    student_id = record[0]
     
-    def show_exam_questions(self, exam_index):
-        exam = self.data.exams[exam_index]
+    popup = tk.Toplevel(root)
+    popup.title("Update Student")
+    
+    tk.Label(popup, text="Name:").grid(row=0, column=0, padx=5, pady=5)
+    name_entry = tk.Entry(popup)
+    name_entry.insert(0, record[1])
+    name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    tk.Label(popup, text="Email:").grid(row=1, column=0, padx=5, pady=5)
+    email_entry = tk.Entry(popup)
+    email_entry.insert(0, record[2])
+    email_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    def submit():
+        name = name_entry.get()
+        email = email_entry.get()
+        if name and email:
+            try:
+                cursor.execute("UPDATE Student SET name=?, email=? WHERE student_id=?",
+                               (name, email, student_id))
+                conn.commit()
+                refresh_student_tree()
+                popup.destroy()
+            except sqlite3.IntegrityError as e:
+                messagebox.showerror("Error", f"Could not update student: {e}")
+        else:
+            messagebox.showwarning("Input Error", "All fields are required.")
+
+    tk.Button(popup, text="Update", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+
+def delete_student():
+    selected = student_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Student", "Please select a student to delete.")
+        return
+    record = student_tree.item(selected, "values")
+    student_id = record[0]
+    if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this student?"):
+        cursor.execute("DELETE FROM Student WHERE student_id=?", (student_id,))
+        conn.commit()
+        refresh_student_tree()
+
+# Buttons for Student Tab
+student_button_frame = ttk.Frame(student_frame)
+student_button_frame.pack(pady=5)
+
+ttk.Button(student_button_frame, text="Add Student", command=add_student).pack(side="left", padx=5)
+ttk.Button(student_button_frame, text="Update Student", command=update_student).pack(side="left", padx=5)
+ttk.Button(student_button_frame, text="Delete Student", command=delete_student).pack(side="left", padx=5)
+
+refresh_student_tree()
+
+# -------------
+# Course Tab
+# -------------
+course_frame = ttk.Frame(notebook)
+notebook.add(course_frame, text="Courses")
+
+course_tree = ttk.Treeview(course_frame, columns=("ID", "Course Name", "Credits"), show="headings")
+course_tree.heading("ID", text="ID")
+course_tree.heading("Course Name", text="Course Name")
+course_tree.heading("Credits", text="Credits")
+course_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+def refresh_course_tree():
+    for row in course_tree.get_children():
+        course_tree.delete(row)
+    cursor.execute("SELECT * FROM Course")
+    for row in cursor.fetchall():
+        course_tree.insert("", "end", values=row)
+
+def add_course():
+    popup = tk.Toplevel(root)
+    popup.title("Add Course")
+
+    tk.Label(popup, text="Course Name:").grid(row=0, column=0, padx=5, pady=5)
+    course_entry = tk.Entry(popup)
+    course_entry.grid(row=0, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Credits:").grid(row=1, column=0, padx=5, pady=5)
+    credits_entry = tk.Entry(popup)
+    credits_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    def submit():
+        course_name = course_entry.get()
+        credits = credits_entry.get()
+        if course_name and credits:
+            try:
+                cursor.execute("INSERT INTO Course (course_name, credits) VALUES (?, ?)", 
+                               (course_name, int(credits)))
+                conn.commit()
+                refresh_course_tree()
+                popup.destroy()
+            except sqlite3.IntegrityError as e:
+                messagebox.showerror("Error", f"Could not add course: {e}")
+            except ValueError:
+                messagebox.showwarning("Input Error", "Credits must be a number.")
+        else:
+            messagebox.showwarning("Input Error", "All fields are required.")
+
+    tk.Button(popup, text="Add", command=submit).grid(row=2, column=0, columnspan=2, pady=10)
+
+def update_course():
+    selected = course_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Course", "Please select a course to update.")
+        return
+    record = course_tree.item(selected, "values")
+    course_id = record[0]
+    
+    popup = tk.Toplevel(root)
+    popup.title("Update Course")
+    
+    tk.Label(popup, text="Course Name:").grid(row=0, column=0, padx=5, pady=5)
+    course_entry = tk.Entry(popup)
+    course_entry.insert(0, record[1])
+    course_entry.grid(row=0, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Credits:").grid(row=1, column=0, padx=5, pady=5)
+    credits_entry = tk.Entry(popup)
+    credits_entry.insert(0, record[2])
+    credits_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    def submit():
+        course_name = course_entry.get()
+        credits = credits_entry.get()
+        if course_name and credits:
+            try:
+                cursor.execute("UPDATE Course SET course_name=?, credits=? WHERE course_id=?",
+                               (course_name, int(credits), course_id))
+                conn.commit()
+                refresh_course_tree()
+                popup.destroy()
+            except sqlite3.IntegrityError as e:
+                messagebox.showerror("Error", f"Could not update course: {e}")
+            except ValueError:
+                messagebox.showwarning("Input Error", "Credits must be a number.")
+        else:
+            messagebox.showwarning("Input Error", "All fields are required.")
+
+    tk.Button(popup, text="Update", command=submit).grid(row=2, column=0, columnspan=2, pady=10)
+
+def delete_course():
+    selected = course_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Course", "Please select a course to delete.")
+        return
+    record = course_tree.item(selected, "values")
+    course_id = record[0]
+    if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this course?"):
+        cursor.execute("DELETE FROM Course WHERE course_id=?", (course_id,))
+        conn.commit()
+        refresh_course_tree()
+
+# Buttons for Course Tab
+course_button_frame = ttk.Frame(course_frame)
+course_button_frame.pack(pady=5)
+
+ttk.Button(course_button_frame, text="Add Course", command=add_course).pack(side="left", padx=5)
+ttk.Button(course_button_frame, text="Update Course", command=update_course).pack(side="left", padx=5)
+ttk.Button(course_button_frame, text="Delete Course", command=delete_course).pack(side="left", padx=5)
+
+refresh_course_tree()
+
+# -------------
+# Grade Tab
+# -------------
+grade_frame = ttk.Frame(notebook)
+notebook.add(grade_frame, text="Grades")
+
+grade_tree = ttk.Treeview(grade_frame, columns=("ID", "Student", "Course", "Semester", "Grade Point"), show="headings")
+for col in ("ID", "Student", "Course", "Semester", "Grade Point"):
+    grade_tree.heading(col, text=col)
+grade_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+def refresh_grade_tree():
+    for row in grade_tree.get_children():
+        grade_tree.delete(row)
+    cursor.execute("""
+        SELECT g.grade_id, s.name, c.course_name, g.semester, g.grade_point 
+        FROM Grade g 
+        JOIN Student s ON g.student_id = s.student_id 
+        JOIN Course c ON g.course_id = c.course_id
+    """)
+    for row in cursor.fetchall():
+        grade_tree.insert("", "end", values=row)
+
+def add_grade():
+    popup = tk.Toplevel(root)
+    popup.title("Add Grade")
+
+    # Get lists of students and courses for selection
+    cursor.execute("SELECT student_id, name FROM Student")
+    students = cursor.fetchall()
+    cursor.execute("SELECT course_id, course_name FROM Course")
+    courses = cursor.fetchall()
+    
+    tk.Label(popup, text="Student:").grid(row=0, column=0, padx=5, pady=5)
+    student_var = tk.StringVar()
+    student_choices = {f"{sid} - {name}": sid for sid, name in students}
+    student_menu = ttk.Combobox(popup, textvariable=student_var, values=list(student_choices.keys()), state="readonly")
+    student_menu.grid(row=0, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Course:").grid(row=1, column=0, padx=5, pady=5)
+    course_var = tk.StringVar()
+    course_choices = {f"{cid} - {course}": cid for cid, course in courses}
+    course_menu = ttk.Combobox(popup, textvariable=course_var, values=list(course_choices.keys()), state="readonly")
+    course_menu.grid(row=1, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Semester:").grid(row=2, column=0, padx=5, pady=5)
+    semester_entry = tk.Entry(popup)
+    semester_entry.grid(row=2, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Grade Point:").grid(row=3, column=0, padx=5, pady=5)
+    grade_entry = tk.Entry(popup)
+    grade_entry.grid(row=3, column=1, padx=5, pady=5)
+    
+    def submit():
+        stud_key = student_var.get()
+        course_key = course_var.get()
+        semester = semester_entry.get()
+        grade_point = grade_entry.get()
+        if stud_key and course_key and semester and grade_point:
+            try:
+                student_id = student_choices[stud_key]
+                course_id = course_choices[course_key]
+                cursor.execute("INSERT INTO Grade (student_id, course_id, semester, grade_point) VALUES (?, ?, ?, ?)",
+                               (student_id, course_id, int(semester), float(grade_point)))
+                conn.commit()
+                refresh_grade_tree()
+                popup.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not add grade: {e}")
+        else:
+            messagebox.showwarning("Input Error", "All fields are required.")
+    
+    tk.Button(popup, text="Add", command=submit).grid(row=4, column=0, columnspan=2, pady=10)
+
+def update_grade():
+    selected = grade_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Grade", "Please select a grade to update.")
+        return
+    record = grade_tree.item(selected, "values")
+    grade_id = record[0]
+    
+    # Get current grade details
+    cursor.execute("""
+        SELECT g.student_id, g.course_id, g.semester, g.grade_point, s.name, c.course_name 
+        FROM Grade g 
+        JOIN Student s ON g.student_id = s.student_id 
+        JOIN Course c ON g.course_id = c.course_id 
+        WHERE g.grade_id = ?
+    """, (grade_id,))
+    grade_data = cursor.fetchone()
+    
+    popup = tk.Toplevel(root)
+    popup.title("Update Grade")
+    
+    # Get lists of students and courses for selection
+    cursor.execute("SELECT student_id, name FROM Student")
+    students = cursor.fetchall()
+    cursor.execute("SELECT course_id, course_name FROM Course")
+    courses = cursor.fetchall()
+    
+    tk.Label(popup, text="Student:").grid(row=0, column=0, padx=5, pady=5)
+    student_var = tk.StringVar()
+    student_choices = {f"{sid} - {name}": sid for sid, name in students}
+    student_menu = ttk.Combobox(popup, textvariable=student_var, values=list(student_choices.keys()), state="readonly")
+    student_menu.set(f"{grade_data[0]} - {grade_data[4]}")
+    student_menu.grid(row=0, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Course:").grid(row=1, column=0, padx=5, pady=5)
+    course_var = tk.StringVar()
+    course_choices = {f"{cid} - {course}": cid for cid, course in courses}
+    course_menu = ttk.Combobox(popup, textvariable=course_var, values=list(course_choices.keys()), state="readonly")
+    course_menu.set(f"{grade_data[1]} - {grade_data[5]}")
+    course_menu.grid(row=1, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Semester:").grid(row=2, column=0, padx=5, pady=5)
+    semester_entry = tk.Entry(popup)
+    semester_entry.insert(0, grade_data[2])
+    semester_entry.grid(row=2, column=1, padx=5, pady=5)
+    
+    tk.Label(popup, text="Grade Point:").grid(row=3, column=0, padx=5, pady=5)
+    grade_entry = tk.Entry(popup)
+    grade_entry.insert(0, grade_data[3])
+    grade_entry.grid(row=3, column=1, padx=5, pady=5)
+    
+    def submit():
+        stud_key = student_var.get()
+        course_key = course_var.get()
+        semester = semester_entry.get()
+        grade_point = grade_entry.get()
+        if stud_key and course_key and semester and grade_point:
+            try:
+                student_id = student_choices[stud_key]
+                course_id = course_choices[course_key]
+                cursor.execute("UPDATE Grade SET student_id=?, course_id=?, semester=?, grade_point=? WHERE grade_id=?",
+                               (student_id, course_id, int(semester), float(grade_point), grade_id))
+                conn.commit()
+                refresh_grade_tree()
+                popup.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not update grade: {e}")
+        else:
+            messagebox.showwarning("Input Error", "All fields are required.")
+    
+    tk.Button(popup, text="Update", command=submit).grid(row=4, column=0, columnspan=2, pady=10, bg="#fff")
+def delete_grade():
+    selected = grade_tree.focus()
+    if not selected:
+        messagebox.showwarning("Select Grade", "Please select a grade to delete.")
+        return
+    record = grade_tree.item(selected, "values")
+    grade_id = record[0]
+    if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this grade?"):
+        cursor.execute("DELETE FROM Grade WHERE grade_id=?", (grade_id,))
+        conn.commit()
+        refresh_grade_tree()
+
+# Buttons for Grade Tab
+grade_button_frame = ttk.Frame(grade_frame)
+grade_button_frame.pack(pady=5)
+
+ttk.Button(grade_button_frame, text="Add Grade", command=add_grade).pack(side="left", padx=5)
+ttk.Button(grade_button_frame, text="Update Grade", command=update_grade).pack(side="left", padx=5)
+ttk.Button(grade_button_frame, text="Delete Grade", command=delete_grade).pack(side="left", padx=5)
+
+refresh_grade_tree()
+
+# -------------
+# CGPA Calculator Tab
+# -------------
+calculator_frame = ttk.Frame(notebook)
+notebook.add(calculator_frame, text="CGPA Calculator")
+
+# Top part: Student Selection
+calc_top_frame = ttk.Frame(calculator_frame)
+calc_top_frame.pack(fill="x", padx=10, pady=10)
+
+tk.Label(calc_top_frame, text="Select Student:").pack(side="left", padx=5)
+student_var = tk.StringVar()
+cursor.execute("SELECT student_id, name FROM Student")
+students = cursor.fetchall()
+student_choices = {f"{sid} - {name}": sid for sid, name in students}
+student_menu = ttk.Combobox(calc_top_frame, textvariable=student_var, 
+                        values=list(student_choices.keys()), width=30, state="readonly")
+student_menu.pack(side="left", padx=5)
+
+# Middle part: Results Display
+results_frame = ttk.LabelFrame(calculator_frame, text="GPA Results")
+results_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Create a treeview for semester-wise SGPA
+sgpa_tree = ttk.Treeview(results_frame, columns=("Semester", "SGPA", "Credits"), show="headings")
+sgpa_tree.heading("Semester", text="Semester")
+sgpa_tree.heading("SGPA", text="SGPA")
+sgpa_tree.heading("Credits", text="Credits")
+sgpa_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+# CGPA Display
+cgpa_frame = ttk.Frame(results_frame)
+cgpa_frame.pack(fill="x", padx=10, pady=5)
+
+cgpa_label = tk.Label(cgpa_frame, text="CGPA: ", font=("Arial", 14, "bold"))
+cgpa_label.pack(side="left")
+
+cgpa_value = tk.Label(cgpa_frame, text="--", font=("Arial", 14))
+cgpa_value.pack(side="left")
+
+total_credits_label = tk.Label(cgpa_frame, text="Total Credits: ", font=("Arial", 12), padx=20)
+total_credits_label.pack(side="left")
+
+total_credits_value = tk.Label(cgpa_frame, text="--", font=("Arial", 12))
+total_credits_value.pack(side="left")
+
+def calculate_cgpa():
+    # Clear previous results
+    for row in sgpa_tree.get_children():
+        sgpa_tree.delete(row)
+    
+    student_selection = student_var.get()
+    if not student_selection:
+        messagebox.showwarning("Selection Error", "Please select a student.")
+        return
+    
+    student_id = student_choices[student_selection]
+    
+    # Get all semesters for this student
+    cursor.execute("SELECT DISTINCT semester FROM Grade WHERE student_id = ? ORDER BY semester", (student_id,))
+    semesters = [row[0] for row in cursor.fetchall()]
+    
+    if not semesters:
+        messagebox.showinfo("No Data", "No grade data found for this student.")
+        cgpa_value.config(text="--")
+        total_credits_value.config(text="--")
+        return
+    
+    # Calculate SGPA for each semester
+    semester_credits = []
+    semester_sgpas = []
+    
+    for semester in semesters:
+        cursor.execute("""
+            SELECT g.grade_point, c.credits 
+            FROM Grade g 
+            JOIN Course c ON g.course_id = c.course_id 
+            WHERE g.student_id = ? AND g.semester = ?
+        """, (student_id, semester))
+        grades = cursor.fetchall()
         
-        questions_window = tk.Toplevel(self.root)
-        questions_window.title(f"Questions - {exam.title}")
-        questions_window.geometry("800x600")
-        questions_window.configure(bg="#f0f0f0")
+        total_points = sum(grade * credits for grade, credits in grades)
+        total_credits = sum(credits for _, credits in grades)
         
-        title_label = tk.Label(questions_window, text=f"Questions for {exam.title}", 
-                              font=("Arial", 18, "bold"), bg="#f0f0f0")
-        title_label.pack(pady=20)
-        
-        questions_frame = tk.Frame(questions_window, bg="white", bd=1, relief="solid")
-        questions_frame.pack(fill="both", expand=True, padx=50, pady=20)
-        
-        canvas = tk.Canvas(questions_frame, bg="white")
-        canvas.pack(side="left", fill="both", expand=True)
-        
-        scrollbar = ttk.Scrollbar(questions_frame, orient="vertical", command=canvas.yview)
-        scrollbar.pack(side="right", fill="y")
-        
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        questions_inner_frame = tk.Frame(canvas, bg="white")
-        canvas.create_window((0, 0), window=questions_inner_frame, anchor="nw")
-        
-        for i, question in enumerate(exam.questions):
-            question_frame = tk.Frame(questions_inner_frame, bg="white", bd=1, relief="solid")
-            question_frame.pack(fill="x", padx=10, pady=10)
-            
-            tk.Label(question_frame, text=f"Q{i+1}: {question.question_text}", 
-                   font=("Arial", 12, "bold"), bg="white").pack(anchor="w", padx=10, pady=5)
-            
-            for j, option in enumerate(question.options):
-                option_frame = tk.Frame(question_frame, bg="white")
-                option_frame.pack(fill="x", padx=10, pady=2)
-                
-                if j == question.correct_answer:
-                    tk.Label(option_frame, text=f"✓ {option}", 
-                           font=("Arial", 12), fg="green", bg="white").pack(anchor="w", padx=20)
-                else:
-                    tk.Label(option_frame, text=f"  {option}", 
-                           font=("Arial", 12), bg="white").pack(anchor="w", padx=20)
-        
-        questions_inner_frame.update_idlet
+        if total_credits > 0:
+            sgpa = total_points / total_credits
+            semester_credits.append(total_credits)
+            semester_sgpas.append(sgpa)
+            sgpa_tree.insert("", "end", values=(f"Semester {semester}", f"{sgpa:.2f}", total_credits))
+    
+    # Calculate CGPA using the formula from the image
+    total_weighted_sgpa = sum(sgpa * credits for sgpa, credits in zip(semester_sgpas, semester_credits))
+    total_all_credits = sum(semester_credits)
+    
+    if total_all_credits > 0:
+        cgpa = total_weighted_sgpa / total_all_credits
+        cgpa_value.config(text=f"{cgpa:.2f}")
+        total_credits_value.config(text=f"{total_all_credits}")
+    else:
+        cgpa_value.config(text="--")
+        total_credits_value.config(text="--")
+
+# Button to calculate
+calc_button_frame = ttk.Frame(calculator_frame)
+calc_button_frame.pack(pady=10)
+
+ttk.Button(calc_button_frame, text="Calculate CGPA", command=calculate_cgpa).pack()
+
+# Formula display
+formula_frame = ttk.LabelFrame(calculator_frame, text="Formula Reference")
+formula_frame.pack(fill="x", padx=10, pady=10)
+
+formula_text = """
+SGPA Formula: SGPA = Σ(Credits × Grade Points) / Σ(Credits)
+CGPA Formula: CGPA = Σ(Credits × SGPA) / Σ(Credits)
+
+Where:
+- Credits: Number of credit hours for each course
+- Grade Points: Points scored in each course (usually on a scale of 0-4 or 0-10)
+- SGPA: Semester Grade Point Average
+- CGPA: Cumulative Grade Point Average
+"""
+tk.Label(formula_frame, text=formula_text, justify="left").pack(padx=10, pady=10)
+
+# -----------------------------
+# Main loop
+# -----------------------------
+root.mainloop()
+
+# Close the database connection when the app exits
+conn.close()

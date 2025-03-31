@@ -1,0 +1,1 @@
+cursor.execute("SELECT student_id, name FROM Student")
