@@ -13,8 +13,8 @@ This project is a ScholarSync is a Student Academic Administration application d
 Ensure you have Python installed on your system.
 
 ```sh
-tkinter and sqlite3, it's a part of the Python stdlib
-~~Make sure to update python
+tkinter and sqlite3, A part of the Python stdlib
+~~ Make sure to update python
 ```
 
 ## Usage
@@ -45,5 +45,5 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-For issues or suggestions, please contact 1ThirtyFive or  at holofoil79@gmail.com or open an issue on GitHub.
+For issues or suggestions, please contact 1ThirtyFive (holofoil79@gmail.com) / Raaaaj360 ()  or open an issue on GitHub.
 
