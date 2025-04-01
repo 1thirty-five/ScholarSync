@@ -25,12 +25,6 @@ Run the script using:
 python -u main.py
 ```
 
-Example usage:
-
-```sh
-python main.py --input data.csv --output report.json
-```
-
 ## Contributing
 
 If you’d like to contribute:
