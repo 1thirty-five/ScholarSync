@@ -39,5 +39,5 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-For issues or suggestions, please contact 1ThirtyFive ( holofoil79@gmail.com ) / Raaaaj360 ( rajkharkwal34@gmail.com )  or open an issue on GitHub.
+For issues or suggestions, please contact 1ThirtyFive - holofoil79@gmail.com / Raaaaj360 - rajkharkwal34@gmail.com or open an issue on GitHub.
 
