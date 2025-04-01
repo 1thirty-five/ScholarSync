@@ -43,6 +43,7 @@ notebook.pack(fill='both', expand=True)
 # -------------
 # Student Tab
 # -------------
+
 student_frame = ttk.Frame(notebook)
 notebook.add(student_frame, text="Students")
 
@@ -150,6 +151,7 @@ refresh_student_tree()
 # -------------
 # Course Tab
 # -------------
+
 course_frame = ttk.Frame(notebook)
 notebook.add(course_frame, text="Courses")
 
@@ -334,6 +336,7 @@ ttk.Button(course_button_frame, text="Delete Course", command=delete_course).pac
 # -------------
 # Professor Tab
 # -------------
+
 professor_frame = ttk.Frame(notebook)
 notebook.add(professor_frame, text="Professors")
 
@@ -507,9 +510,12 @@ conn.commit()
 # Initialize both views
 refresh_professor_tree()
 refresh_course_tree()
+
+
 # -------------
 # Grade Entry Tab
 # -------------
+
 grade_entry_frame = ttk.Frame(notebook)
 notebook.add(grade_entry_frame, text="Grade Entry")
 
@@ -797,6 +803,10 @@ ttk.Button(button_frame, text="Refresh", command=refresh_grade_status_tree).pack
 # Initialize the grade status tree
 refresh_grade_status_tree()
 
+# -------------
+# Course Registration Tab
+# -------------
+
 registration_frame = ttk.Frame(notebook)
 notebook.add(registration_frame, text="Course Registration")
 
@@ -983,6 +993,7 @@ refresh_registration_tree()
 # -------------
 # CGPA Calculator Tab
 # -------------
+
 calculator_frame = ttk.Frame(notebook)
 notebook.add(calculator_frame, text="CGPA Calculator")
 
@@ -992,12 +1003,22 @@ calc_top_frame.pack(fill="x", padx=10, pady=10)
 
 tk.Label(calc_top_frame, text="Select Student:").pack(side="left", padx=5)
 student_var = tk.StringVar()
-cursor.execute("SELECT student_id, name FROM Student")
-students = cursor.fetchall()
-student_choices = {f"{sid} - {name}": sid for sid, name in students}
+
+# Function to fetch and populate student list
+def populate_student_list():
+    cursor.execute("SELECT student_id, name FROM Student")
+    students = cursor.fetchall()
+    student_choices = {f"{sid} - {name}": sid for sid, name in students}
+    student_menu['values'] = list(student_choices.keys())
+    return student_choices
+
+# Create the dropdown but we'll populate it later
 student_menu = ttk.Combobox(calc_top_frame, textvariable=student_var, 
-                        values=list(student_choices.keys()), width=30, state="readonly")
+                      width=30, state="readonly")
 student_menu.pack(side="left", padx=5)
+
+# Initial population of the dropdown
+student_choices = populate_student_list()
 
 # Middle part: Results Display
 results_frame = ttk.LabelFrame(calculator_frame, text="GPA Results")
@@ -1082,11 +1103,31 @@ def calculate_cgpa():
         cgpa_value.config(text="--")
         total_credits_value.config(text="--")
 
-# Button to calculate
+def refresh_calculator():
+    # Update the student list from the database
+    global student_choices
+    student_choices = populate_student_list()
+    
+    # Clear the student selection
+    student_var.set("")
+    
+    # Clear the results
+    for row in sgpa_tree.get_children():
+        sgpa_tree.delete(row)
+    
+    # Reset labels
+    cgpa_value.config(text="--")
+    total_credits_value.config(text="--")
+    
+    # Show a confirmation message
+    messagebox.showinfo("Refresh Complete", "Student list has been refreshed from the database.")
+
+# Button frame for calculate and refresh buttons
 calc_button_frame = ttk.Frame(calculator_frame)
 calc_button_frame.pack(pady=10)
 
-ttk.Button(calc_button_frame, text="Calculate CGPA", command=calculate_cgpa).pack()
+ttk.Button(calc_button_frame, text="Calculate CGPA", command=calculate_cgpa).pack(side="left", padx=5)
+ttk.Button(calc_button_frame, text="Refresh", command=refresh_calculator).pack(side="left", padx=5)
 
 # Formula display
 formula_frame = ttk.LabelFrame(calculator_frame, text="Formula Reference")
@@ -1103,7 +1144,6 @@ Where:
 - CGPA: Cumulative Grade Point Average
 """
 tk.Label(formula_frame, text=formula_text, justify="left").pack(padx=10, pady=10)
-
 # -----------------------------
 # Main loop
 # -----------------------------
