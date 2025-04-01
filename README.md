@@ -14,7 +14,7 @@ Ensure you have Python installed on your system.
 
 ```sh
 tkinter and sqlite3, A part of the Python stdlib
-~~ Make sure to update python
+~ Make sure to update python
 ```
 
 ## Usage
