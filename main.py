@@ -34,7 +34,7 @@ init_db()
 # Tkinter GUI Application
 # -----------------------------
 root = tk.Tk()
-root.title("CGPA Calculator System")
+root.title("ScholarSync")
 root.geometry("900x600")
 
 notebook = ttk.Notebook(root)
