@@ -1,19 +1,20 @@
-# Python Project: [Your Project Name]
+# Python Project: ScholarSync
 
-This project is a [brief description of what the project does]. It automates [some process], processes data efficiently, and provides a [feature] for [target users].
+This project is a ScholarSync is a Student Academic Administration application designed to simplify the management of student records, academic progress, and administrative tasks. It helps institutions streamline student data management, automate grading, and generate insightful academic reports. It automates Student Academic Administration, processes data efficiently, and provides a GUI for Student Admin.
 
 ## Features
-- Automates [specific task]
-- Processes data efficiently using [library/algorithm]
-- Provides [feature] for easy [usage]
-- Generates reports in [format]
+- Automates Book Keeping for Student Academic Administration
+- Processes data efficiently using Sqlite and Python 3.12.3
+- Provides GUI for easy Student Academic Administration
+- Generates reports in exportable .Txt format and also features gui to do the same 
 
 ## Installation
 
-Ensure you have Python installed on your system. Then, install dependencies using:
+Ensure you have Python installed on your system.
 
 ```sh
-pip install -r requirements.txt
+tkinter and sqlite3, it's a part of the Python stdlib
+~~Make sure to update python
 ```
 
 ## Usage
@@ -21,22 +22,13 @@ pip install -r requirements.txt
 Run the script using:
 
 ```sh
-python main.py [optional arguments]
+python -u main.py
 ```
 
 Example usage:
 
 ```sh
 python main.py --input data.csv --output report.json
-```
-
-## Configuration
-
-- Modify `config.json` to adjust parameters such as [API keys, file paths, processing options]
-- Set environment variables for sensitive information:
-
-```sh
-export API_KEY='your_api_key_here'
 ```
 
 ## Contributing
@@ -49,9 +41,9 @@ If you’d like to contribute:
 
 ## License
 
-This project is licensed under the [MIT/Apache/etc.] License.
+This project is licensed under the MIT License.
 
 ## Contact
 
-For issues or suggestions, please contact [Your Name] at [Your Email] or open an issue on GitHub.
+For issues or suggestions, please contact 1ThirtyFive or  at holofoil79@gmail.com or open an issue on GitHub.
 
