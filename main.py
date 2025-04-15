@@ -9,6 +9,17 @@ import os
 conn = sqlite3.connect("student_grades.db")
 cursor = conn.cursor()
 
+# Define color palette
+# Color scheme based on the blue-grey-white reference
+BACKGROUND_COLOR = "#f0f2f5"
+PRIMARY_COLOR = "#3b5998"  # Blue color for headings and primary buttons
+SECONDARY_COLOR = "#e0e0e0"  # Light grey for secondary buttons
+TEXT_COLOR = "#333333"
+ACCENT_COLOR = "#f8f9fa"  # Very light grey for section backgrounds
+WHITE = "#ffffff"
+
+
+
 def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS Student (
                         student_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,8 +49,16 @@ root.title("ScholarSync")
 root.geometry("900x600")
 
 notebook = ttk.Notebook(root)
-notebook.pack(fill='both', expand=True)
+notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
+# Create a notebook (tabbed interface)
+style = ttk.Style()
+style.configure("TNotebook", background=BACKGROUND_COLOR)
+style.configure("TNotebook.Tab", background=SECONDARY_COLOR, padding=[10, 5])
+style.configure("TFrame", background=BACKGROUND_COLOR)
+style.configure("TLabelframe", background=BACKGROUND_COLOR)
+style.configure("TLabelframe.Label", background=BACKGROUND_COLOR, foreground=PRIMARY_COLOR, font=("Arial", 11, "bold"))
+style.configure("TButton", background=PRIMARY_COLOR, foreground="white", font=("Arial", 10, "bold"))
 # -------------
 # Student Tab
 # -------------
@@ -333,21 +352,43 @@ ttk.Button(course_button_frame, text="Add Course", command=add_course).pack(side
 ttk.Button(course_button_frame, text="Update Course", command=update_course).pack(side="left", padx=5)
 ttk.Button(course_button_frame, text="Delete Course", command=delete_course).pack(side="left", padx=5)
 
+
 # -------------
 # Professor Tab
 # -------------
 
+# Professor Tab (keeping original structure)
 professor_frame = ttk.Frame(notebook)
 notebook.add(professor_frame, text="Professors")
 
-professor_tree = ttk.Treeview(professor_frame, columns=("ID", "First Name", "Last Name", "Department", "Email"), show="headings")
+# Set up the professor treeview with improved styling
+professor_tree = ttk.Treeview(professor_frame, columns=("ID", "First Name", "Last Name", "Department", "Email"), 
+                             show="headings")
+
+# Configure column widths
+professor_tree.column("ID", width=50, anchor="center")
+professor_tree.column("First Name", width=120)
+professor_tree.column("Last Name", width=120)
+professor_tree.column("Department", width=150)
+professor_tree.column("Email", width=200)
+
+# Configure column headings
 professor_tree.heading("ID", text="ID")
 professor_tree.heading("First Name", text="First Name")
 professor_tree.heading("Last Name", text="Last Name")
 professor_tree.heading("Department", text="Department")
 professor_tree.heading("Email", text="Email")
-professor_tree.pack(fill="both", expand=True, padx=10, pady=10)
 
+# Add scrollbar
+y_scrollbar = ttk.Scrollbar(professor_frame, orient="vertical", command=professor_tree.yview)
+professor_tree.configure(yscrollcommand=y_scrollbar.set)
+
+# Position treeview and scrollbar
+professor_tree.pack(fill="both", expand=True, padx=10, pady=10)
+y_scrollbar.place(relx=1.0, rely=0.0, relheight=0.9, anchor='ne')
+
+
+# Keep the original refresh function
 def refresh_professor_tree():
     for row in professor_tree.get_children():
         professor_tree.delete(row)
@@ -355,25 +396,32 @@ def refresh_professor_tree():
     for row in cursor.fetchall():
         professor_tree.insert("", "end", values=row)
 
+# Modified popup styling for add_professor function
 def add_professor():
     popup = tk.Toplevel(root)
     popup.title("Add Professor")
+    popup.configure(bg=WHITE)
+    popup.geometry("350x250")
+    
+    # Add some padding around the form
+    form_frame = tk.Frame(popup, bg=WHITE, padx=15, pady=15)
+    form_frame.pack(fill="both", expand=True)
 
-    tk.Label(popup, text="First Name:").grid(row=0, column=0, padx=5, pady=5)
-    first_name_entry = tk.Entry(popup)
-    first_name_entry.grid(row=0, column=1, padx=5, pady=5)
+    tk.Label(form_frame, text="First Name:", bg=WHITE, fg=TEXT_COLOR).grid(row=0, column=0, padx=5, pady=8, sticky="w")
+    first_name_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
+    first_name_entry.grid(row=0, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Last Name:").grid(row=1, column=0, padx=5, pady=5)
-    last_name_entry = tk.Entry(popup)
-    last_name_entry.grid(row=1, column=1, padx=5, pady=5)
+    tk.Label(form_frame, text="Last Name:", bg=WHITE, fg=TEXT_COLOR).grid(row=1, column=0, padx=5, pady=8, sticky="w")
+    last_name_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
+    last_name_entry.grid(row=1, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Department:").grid(row=2, column=0, padx=5, pady=5)
-    department_entry = tk.Entry(popup)
-    department_entry.grid(row=2, column=1, padx=5, pady=5)
+    tk.Label(form_frame, text="Department:", bg=WHITE, fg=TEXT_COLOR).grid(row=2, column=0, padx=5, pady=8, sticky="w")
+    department_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
+    department_entry.grid(row=2, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Email:").grid(row=3, column=0, padx=5, pady=5)
-    email_entry = tk.Entry(popup)
-    email_entry.grid(row=3, column=1, padx=5, pady=5)
+    tk.Label(form_frame, text="Email:", bg=WHITE, fg=TEXT_COLOR).grid(row=3, column=0, padx=5, pady=8, sticky="w")
+    email_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
+    email_entry.grid(row=3, column=1, padx=5, pady=8)
 
     def submit():
         first_name = first_name_entry.get()
@@ -393,8 +441,84 @@ def add_professor():
         else:
             messagebox.showwarning("Input Error", "All fields are required.")
 
-    tk.Button(popup, text="Add", command=submit).grid(row=4, column=0, columnspan=2, pady=10)
+    # Button frame
+    button_frame = tk.Frame(form_frame, bg=WHITE)
+    button_frame.grid(row=4, column=0, columnspan=2, pady=15)
+    
+    # Add buttons with custom colors
+    add_btn = tk.Button(button_frame, text="Add", bg=PRIMARY_COLOR, fg=WHITE, command=submit, padx=10)
+    add_btn.pack(side="right", padx=5)
+    
+    cancel_btn = tk.Button(button_frame, text="Cancel", bg=SECONDARY_COLOR, fg=TEXT_COLOR, command=popup.destroy, padx=10)
+    cancel_btn.pack(side="right", padx=5)
 
+
+def delete_professor():
+    # Get the currently selected item in the treeview
+    selected = professor_tree.focus()
+    
+    # Check if an item is selected
+    if not selected:
+        messagebox.showwarning("Select Professor", "Please select a professor to delete.")
+        return
+    
+    # Get the values (data) from the selected item
+    record = professor_tree.item(selected, "values")
+    prof_id = record[0]  # The first column is the professor ID
+    
+    # Check if professor is assigned to any courses
+    cursor.execute("SELECT COUNT(*) FROM CourseAssignment WHERE professor_id = ?", (prof_id,))
+    assigned_count = cursor.fetchone()[0]
+    
+    if assigned_count > 0:
+        # Professor has course assignments - ask for confirmation
+        if messagebox.askyesno("Warning", 
+                            f"This professor is assigned to {assigned_count} course(s). " 
+                            f"Deleting will remove all assignments. Continue?",
+                            icon='warning'):
+            try:
+                # Delete the course assignments first (foreign key constraint)
+                cursor.execute("DELETE FROM CourseAssignment WHERE professor_id=?", (prof_id,))
+                
+                # Then delete the professor
+                cursor.execute("DELETE FROM Professor WHERE professor_id=?", (prof_id,))
+                
+                # Commit the changes to the database
+                conn.commit()
+                
+                # Refresh the treeview to show the updated data
+                refresh_professor_tree()
+                
+                # Also refresh the course tree if it exists (to show professor removals)
+                if 'refresh_course_tree' in globals():
+                    refresh_course_tree()
+                    
+                messagebox.showinfo("Success", "Professor and associated course assignments deleted successfully.")
+            except sqlite3.Error as e:
+                # Show error message if delete operation fails
+                messagebox.showerror("Database Error", f"Failed to delete professor: {e}")
+                conn.rollback()  # Roll back the transaction
+    else:
+        # Professor has no course assignments - simple confirmation
+        if messagebox.askyesno("Confirm Delete", 
+                             f"Are you sure you want to delete professor {record[1]} {record[2]}?"):
+            try:
+                # Delete the professor
+                cursor.execute("DELETE FROM Professor WHERE professor_id=?", (prof_id,))
+                
+                # Commit the changes
+                conn.commit()
+                
+                # Refresh the treeview
+                refresh_professor_tree()
+                
+                messagebox.showinfo("Success", "Professor deleted successfully.")
+            except sqlite3.Error as e:
+                # Show error message if delete operation fails
+                messagebox.showerror("Database Error", f"Failed to delete professor: {e}")
+                conn.rollback()  # Roll back the transaction
+                
+# Modified popup styling for update_professor function (similar changes)
 def update_professor():
     selected = professor_tree.focus()
     if not selected:
@@ -405,26 +529,32 @@ def update_professor():
     
     popup = tk.Toplevel(root)
     popup.title("Update Professor")
+    popup.configure(bg=WHITE)
+    popup.geometry("350x250")
     
-    tk.Label(popup, text="First Name:").grid(row=0, column=0, padx=5, pady=5)
-    first_name_entry = tk.Entry(popup)
+    # Add some padding around the form
+    form_frame = tk.Frame(popup, bg=WHITE, padx=15, pady=15)
+    form_frame.pack(fill="both", expand=True)
+    
+    tk.Label(form_frame, text="First Name:", bg=WHITE, fg=TEXT_COLOR).grid(row=0, column=0, padx=5, pady=8, sticky="w")
+    first_name_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
     first_name_entry.insert(0, record[1])
-    first_name_entry.grid(row=0, column=1, padx=5, pady=5)
+    first_name_entry.grid(row=0, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Last Name:").grid(row=1, column=0, padx=5, pady=5)
-    last_name_entry = tk.Entry(popup)
+    tk.Label(form_frame, text="Last Name:", bg=WHITE, fg=TEXT_COLOR).grid(row=1, column=0, padx=5, pady=8, sticky="w")
+    last_name_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
     last_name_entry.insert(0, record[2])
-    last_name_entry.grid(row=1, column=1, padx=5, pady=5)
+    last_name_entry.grid(row=1, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Department:").grid(row=2, column=0, padx=5, pady=5)
-    department_entry = tk.Entry(popup)
+    tk.Label(form_frame, text="Department:", bg=WHITE, fg=TEXT_COLOR).grid(row=2, column=0, padx=5, pady=8, sticky="w")
+    department_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
     department_entry.insert(0, record[3])
-    department_entry.grid(row=2, column=1, padx=5, pady=5)
+    department_entry.grid(row=2, column=1, padx=5, pady=8)
     
-    tk.Label(popup, text="Email:").grid(row=3, column=0, padx=5, pady=5)
-    email_entry = tk.Entry(popup)
+    tk.Label(form_frame, text="Email:", bg=WHITE, fg=TEXT_COLOR).grid(row=3, column=0, padx=5, pady=8, sticky="w")
+    email_entry = tk.Entry(form_frame, bg=WHITE, fg=TEXT_COLOR)
     email_entry.insert(0, record[4])
-    email_entry.grid(row=3, column=1, padx=5, pady=5)
+    email_entry.grid(row=3, column=1, padx=5, pady=8)
 
     def submit():
         first_name = first_name_entry.get()
@@ -443,103 +573,181 @@ def update_professor():
                 messagebox.showerror("Error", f"Could not update professor: {e}")
         else:
             messagebox.showwarning("Input Error", "All fields are required.")
+        # Buttons for Professor Tab with custom colors
+        professor_button_frame = ttk.Frame(professor_frame)
+        professor_button_frame.pack(pady=5, padx=10, fill="x")
 
-    tk.Button(popup, text="Update", command=submit).grid(row=4, column=0, columnspan=2, pady=10)
 
-def delete_professor():
-    selected = professor_tree.focus()
-    if not selected:
-        messagebox.showwarning("Select Professor", "Please select a professor to delete.")
-        return
-    record = professor_tree.item(selected, "values")
-    prof_id = record[0]
+    # Button frame
+    button_frame = tk.Frame(form_frame)
+    button_frame.grid(row=4, column=0, columnspan=2, pady=15)
     
-    # Check if professor is assigned to courses
-    cursor.execute("SELECT COUNT(*) FROM CourseAssignment WHERE professor_id = ?", (prof_id,))
-    assigned_count = cursor.fetchone()[0]
+    # Add buttons with custom colors
+    update_btn = tk.Button(button_frame, text="Update", bg=PRIMARY_COLOR, fg=WHITE, command=submit, padx=10)
+    update_btn.pack(side="right", padx=5)
     
-    if assigned_count > 0:
-        if messagebox.askyesno("Warning", f"This professor is assigned to {assigned_count} course(s). Deleting will remove all assignments. Continue?"):
-            cursor.execute("DELETE FROM CourseAssignment WHERE professor_id=?", (prof_id,))
-            cursor.execute("DELETE FROM Professor WHERE professor_id=?", (prof_id,))
-            conn.commit()
-            refresh_professor_tree()
-            refresh_course_tree()  # Refresh course tree to show professor removals
-    else:
-        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this professor?"):
-            cursor.execute("DELETE FROM Professor WHERE professor_id=?", (prof_id,))
-            conn.commit()
-            refresh_professor_tree()
+    cancel_btn = tk.Button(button_frame, text="Cancel", bg=SECONDARY_COLOR, fg=TEXT_COLOR, command=popup.destroy, padx=10)
+    cancel_btn.pack(side="right", padx=5)
 
-# Buttons for Professor Tab
+
+# but messagebox appearance will be affected by system settings
+
+# Buttons for Professor Tab with custom colors
 professor_button_frame = ttk.Frame(professor_frame)
-professor_button_frame.pack(pady=5)
+professor_button_frame.pack(pady=5, padx=10, fill="x")
 
-ttk.Button(professor_button_frame, text="Add Professor", command=add_professor).pack(side="left", padx=5)
-ttk.Button(professor_button_frame, text="Update Professor", command=update_professor).pack(side="left", padx=5)
-ttk.Button(professor_button_frame, text="Delete Professor", command=delete_professor).pack(side="left", padx=5)
+# Use the custom button styles
+add_button = tk.Button(professor_button_frame, text="Add Professor", command=add_professor, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10)
+add_button.pack(side="left", padx=5)
 
+update_button = tk.Button(professor_button_frame, text="Update Professor", command=update_professor, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10)
+update_button.pack(side="left", padx=5)
+
+delete_button = tk.Button(professor_button_frame, text="Delete Professor", command=delete_professor, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10)
+delete_button.pack(side="left", padx=5)
+
+# Initialize the view
+refresh_professor_tree() 
+    
 # -------------
-# Setup Database Tables
+# Grade Entry Tab
 # -------------
+# Create the grade entry frame
+grade_entry_frame = ttk.Frame(notebook)
+notebook.add(grade_entry_frame, text="Grade Entry")
 
-# Create Professor table if it doesn't exist
+# Add a blue header
+header_frame = ttk.Frame(grade_entry_frame, style="Blue.TFrame")
+header_frame.pack(fill="x")
+header_label = ttk.Label(header_frame, text="Grade Entry", style="Blue.TLabel")
+header_label.pack(pady=10)
+
+# Create treeview to display student grade status
+tree_frame = ttk.Frame(grade_entry_frame)
+tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Add a search bar
+search_frame = ttk.Frame(grade_entry_frame)
+search_frame.pack(fill="x", padx=10, pady=(5, 0))
+
+search_var = tk.StringVar()
+search_entry = ttk.Entry(search_frame, textvariable=search_var, width=25)
+search_entry.pack(side="left", padx=5)
+search_label = ttk.Label(search_frame, text="Search:")
+search_label.pack(side="left", padx=(0, 5))
+
+# Create scrollbar for treeview
+scrollbar = ttk.Scrollbar(tree_frame)
+scrollbar.pack(side="right", fill="y")
+
+grade_status_tree = ttk.Treeview(tree_frame, columns=("ID", "Student", "Grade Status"), 
+                                show="headings", yscrollcommand=scrollbar.set)
+grade_status_tree.heading("ID", text="ID")
+grade_status_tree.heading("Student", text="Student")
+grade_status_tree.heading("Grade Status", text="Grade Status")
+
+# Set column widths
+grade_status_tree.column("ID", width=80)
+grade_status_tree.column("Student", width=200)
+grade_status_tree.column("Grade Status", width=120)
+
+grade_status_tree.pack(fill="both", expand=True, padx=10, pady=10)
+scrollbar.config(command=grade_status_tree.yview)
+
+# Apply custom tags for status coloring
+grade_status_tree.tag_configure("grades_entered", background="#e6ffe6")  # Light green
+grade_status_tree.tag_configure("no_grades", background="#fff9e6")       # Light yellow
+
+# Add this code to your database initialization section
+# (where you created the Professor and CourseAssignment tables)
+
+# Create Student table if it doesn't exist
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS Professor (
-    professor_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    department TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL
+CREATE TABLE IF NOT EXISTS Student (
+    student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    program TEXT NOT NULL
 )
 ''')
 
-# Create CourseAssignment table for the relationship
+# Create Grade table for storing student grades if it doesn't exist
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS CourseAssignment (
-    assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS Grade (
+    grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
-    professor_id INTEGER NOT NULL,
+    grade TEXT NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES Student(student_id),
     FOREIGN KEY (course_id) REFERENCES Course(course_id),
-    FOREIGN KEY (professor_id) REFERENCES Professor(professor_id),
-    UNIQUE(course_id, professor_id)
+    UNIQUE(student_id, course_id)
 )
 ''')
 conn.commit()
 
-# Initialize both views
-refresh_professor_tree()
-refresh_course_tree()
-
-
-# -------------
-# Grade Entry Tab
-# -------------
-
-grade_entry_frame = ttk.Frame(notebook)
-notebook.add(grade_entry_frame, text="Grade Entry")
-
-# Create treeview to display student grade status
-grade_status_tree = ttk.Treeview(grade_entry_frame, columns=("ID", "Student", "Grade Status"), show="headings")
-grade_status_tree.heading("ID", text="ID")
-grade_status_tree.heading("Student", text="Student")
-grade_status_tree.heading("Grade Status", text="Grade Status")
-grade_status_tree.pack(fill="both", expand=True, padx=10, pady=10)
-
+# Then modify your refresh_grade_status_tree function to handle the case 
+# where the table exists but might be empty
 def refresh_grade_status_tree():
-    # Clear existing data
+    # Clear existing items
     for row in grade_status_tree.get_children():
         grade_status_tree.delete(row)
     
-    # Get all students
-    cursor.execute("SELECT student_id, name FROM Student")
-    students = cursor.fetchall()
-    
-    # Check grade status for each student
-    for student_id, name in students:
-        grade_file = f"grades_{student_id}.txt"
-        status = "Grades Entered" if os.path.exists(grade_file) else "No Grades"
-        grade_status_tree.insert("", "end", values=(student_id, name, status))
+    try:
+        # Check if the Student table exists first
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Student'")
+        if cursor.fetchone() is None:
+            messagebox.showwarning("Missing Table", "Student table doesn't exist. Creating it now.")
+            # Create the table if it doesn't exist
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS Student (
+                student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                program TEXT NOT NULL
+            )
+            ''')
+            conn.commit()
+            return  # Return early since the table will be empty
+            
+        # Fetch students
+        cursor.execute("SELECT student_id, name FROM Student")
+        students = cursor.fetchall()
+        
+        if not students:
+            # If no data, insert a sample student for testing
+            sample_data = [
+                ("John Doe", "john.doe@university.edu", "Computer Science"),
+                ("Jane Smith", "jane.smith@university.edu", "Mathematics")
+            ]
+            cursor.executemany("INSERT INTO Student (name, email, program) VALUES (?, ?, ?)", sample_data)
+            conn.commit()
+            
+            # Now fetch again
+            cursor.execute("SELECT student_id, name FROM Student")
+            students = cursor.fetchall()
+        
+        # Display in treeview
+        for student in students:
+            grade_status_tree.insert("", "end", values=student)
+            
+    except sqlite3.OperationalError as e:
+        messagebox.showerror("Database Error", f"Error accessing student data: {e}")
+
+# Search function
+def search_students():
+    refresh_grade_status_tree()
+
+# Add search button
+search_button = tk.Button(search_frame, text="Search", bg="#3b5998", fg="white",
+                        font=("Arial", 10), padx=10, pady=2, bd=0,
+                        command=search_students)
+search_button.pack(side="left", padx=5)
+
+# Clear search button
+clear_button = tk.Button(search_frame, text="Clear", bg="#d3d3d3", fg="black",
+                       font=("Arial", 10), padx=10, pady=2, bd=0,
+                       command=lambda: [search_var.set(""), refresh_grade_status_tree()])
+clear_button.pack(side="left", padx=5)
 
 def enter_grades():
     # Get selected student
@@ -583,6 +791,15 @@ def enter_grades():
     popup = tk.Toplevel(root)
     popup.title(f"Grade Entry - {student_name}")
     popup.geometry("500x400")
+    popup.configure(bg="#f0f0f0")
+    popup.grab_set()  # Make window modal
+    
+    # Add blue header
+    popup_header = tk.Frame(popup, bg="#3b5998", padx=10, pady=10)
+    popup_header.pack(fill="x")
+    popup_title = tk.Label(popup_header, text=f"Grade Entry - {student_name}", 
+                         font=("Arial", 12, "bold"), bg="#3b5998", fg="white")
+    popup_title.pack()
     
     # Create a frame with scrollable area
     main_frame = ttk.Frame(popup)
@@ -607,11 +824,17 @@ def enter_grades():
     # Semester info (use the semester from registration)
     semester_frame = ttk.Frame(scrollable_frame)
     semester_frame.pack(fill="x", pady=5)
-    ttk.Label(semester_frame, text=f"Semester: {current_semester}").pack(side="left", padx=5)
+    ttk.Label(semester_frame, text=f"Semester:").pack(side="left", padx=5)
     semester_var = tk.StringVar(value=current_semester)
     
+    semester_combo = ttk.Combobox(semester_frame, textvariable=semester_var, 
+                                width=15, values=["1", "2", "3","4", "5", "6","7", "8"], 
+                                state="readonly")
+    semester_combo.pack(side="left", padx=5)
+    
     # Info label
-    ttk.Label(scrollable_frame, text="Enter grades for registered courses:").pack(anchor="w", pady=(10, 0))
+    ttk.Label(scrollable_frame, text="Enter grades for registered courses:", 
+             font=("Arial", 10, "bold")).pack(anchor="w", pady=(10, 0))
     
     # Create grade entry fields for registered courses only
     course_grades = {}
@@ -633,7 +856,9 @@ def enter_grades():
         ttk.Label(course_frame, text=f"{course_id} - {course_name}:").grid(row=0, column=0, padx=5, sticky="w")
         
         grade_var = tk.StringVar()
-        grade_entry = ttk.Combobox(course_frame, textvariable=grade_var, values=["AA", "AB", "BB", "BC", "CC", "CD", "DD", "FF"], width=5, state="readonly")
+        grade_entry = ttk.Combobox(course_frame, textvariable=grade_var, 
+                                 values=["AA", "AB", "BB", "BC", "CC", "CD", "DD", "FF"], 
+                                 width=5, state="readonly")
         grade_entry.grid(row=0, column=1, padx=5)
         
         # Store the grade variable with the course_id as the key
@@ -687,17 +912,32 @@ def enter_grades():
                 
                 # Add to database
                 try:
+                # If the semester is just a number like "1", "2", etc.
+                    if semester.isdigit():
+                        semester_num = int(semester)
+                    
+                    else:
+                    # Extract digits from the string
+                        digits = ''.join(filter(str.isdigit, semester))
+                        semester_num = int(digits) if digits else 1  # Default to 1 if no digits found
+            
                     cursor.execute("""
                         INSERT INTO Grade (student_id, course_id, semester, grade_point) 
                         VALUES (?, ?, ?, ?)
-                    """, (student_id, course_id, int(semester), grade_point))
+                    """, (student_id, course_id, semester_num, grade_point))
                     conn.commit()
+                except ValueError:
+                # If conversion fails, use a default value
+                    cursor.execute("""
+                        INSERT INTO Grade (student_id, course_id, semester, grade_point) 
+                        ALUES (?, ?, ?, ?)
+                    """, (student_id, course_id, 1, grade_point))  # Default to semester 1    
                 except Exception as e:
                     # If grade already exists, update it
                     cursor.execute("""
                         UPDATE Grade SET grade_point = ? 
                         WHERE student_id = ? AND course_id = ? AND semester = ?
-                    """, (grade_point, student_id, course_id, int(semester)))
+                    """, (grade_point, student_id, course_id, int(semester.split()[1])))
                     conn.commit()
                 
                 total_points += grade_point
@@ -718,8 +958,13 @@ def enter_grades():
     button_frame = ttk.Frame(popup)
     button_frame.pack(fill="x", padx=10, pady=10)
     
-    ttk.Button(button_frame, text="Save Grades", command=save_grades).pack(side="right", padx=5)
-    ttk.Button(button_frame, text="Cancel", command=popup.destroy).pack(side="right", padx=5)
+    save_button = tk.Button(button_frame, text="Save Grades", bg="#3b5998", fg="white",
+                          font=("Arial", 10), padx=10, pady=2, bd=0, command=save_grades)
+    save_button.pack(side="right", padx=5)
+    
+    cancel_button = tk.Button(button_frame, text="Cancel", bg="#d3d3d3", fg="black",
+                            font=("Arial", 10), padx=10, pady=2, bd=0, command=popup.destroy)
+    cancel_button.pack(side="right", padx=5)
 
 def view_grades():
     # Get selected student
@@ -741,6 +986,15 @@ def view_grades():
     popup = tk.Toplevel(root)
     popup.title(f"Grade Details - {student_name}")
     popup.geometry("400x300")
+    popup.configure(bg="#f0f0f0")
+    popup.grab_set()  # Make window modal
+    
+    # Add blue header
+    popup_header = tk.Frame(popup, bg="#3b5998", padx=10, pady=10)
+    popup_header.pack(fill="x")
+    popup_title = tk.Label(popup_header, text=f"Grade Details - {student_name}", 
+                         font=("Arial", 12, "bold"), bg="#3b5998", fg="white")
+    popup_title.pack()
     
     # Create text widget with scrollbar
     text_frame = ttk.Frame(popup)
@@ -749,7 +1003,7 @@ def view_grades():
     scrollbar = ttk.Scrollbar(text_frame)
     scrollbar.pack(side="right", fill="y")
     
-    text_widget = tk.Text(text_frame, wrap="word", yscrollcommand=scrollbar.set)
+    text_widget = tk.Text(text_frame, wrap="word", yscrollcommand=scrollbar.set, bg="white", fg="black")
     
     with open(grade_file, "r") as f:
         content = f.read()
@@ -759,7 +1013,9 @@ def view_grades():
     text_widget.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=text_widget.yview)
     
-    ttk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+    close_button = tk.Button(popup, text="Close", bg="#3b5998", fg="white",
+                          font=("Arial", 10), padx=10, pady=2, bd=0, command=popup.destroy)
+    close_button.pack(pady=10)
 
 def delete_grades():
     # Get selected student
@@ -795,13 +1051,26 @@ def delete_grades():
 button_frame = ttk.Frame(grade_entry_frame)
 button_frame.pack(fill="x", padx=10, pady=5)
 
-ttk.Button(button_frame, text="Enter Grades", command=enter_grades).pack(side="left", padx=5)
-ttk.Button(button_frame, text="View Grades", command=view_grades).pack(side="left", padx=5)
-ttk.Button(button_frame, text="Delete Grades", command=delete_grades).pack(side="left", padx=5)
-ttk.Button(button_frame, text="Refresh", command=refresh_grade_status_tree).pack(side="left", padx=5)
+# Using custom tk Buttons for blue styling instead of ttk
+enter_btn = tk.Button(button_frame, text="Enter Grades", command=enter_grades,
+                    bg="#3b5998", fg="white", font=("Arial", 10), padx=10, pady=2, bd=0)
+enter_btn.pack(side="left", padx=5)
+
+view_btn = tk.Button(button_frame, text="View Grades", command=view_grades,
+                   bg="#3b5998", fg="white", font=("Arial", 10), padx=10, pady=2, bd=0)
+view_btn.pack(side="left", padx=5)
+
+delete_btn = tk.Button(button_frame, text="Delete Grades", command=delete_grades,
+                     bg="#3b5998", fg="white", font=("Arial", 10), padx=10, pady=2, bd=0)
+delete_btn.pack(side="left", padx=5)
+
+refresh_btn = tk.Button(button_frame, text="Refresh", command=refresh_grade_status_tree,
+                      bg="#d3d3d3", fg="black", font=("Arial", 10), padx=10, pady=2, bd=0)
+refresh_btn.pack(side="left", padx=5)
 
 # Initialize the grade status tree
 refresh_grade_status_tree()
+
 
 # -------------
 # Course Registration Tab
@@ -810,12 +1079,36 @@ refresh_grade_status_tree()
 registration_frame = ttk.Frame(notebook)
 notebook.add(registration_frame, text="Course Registration")
 
+# Top part: Header
+header_frame = ttk.Frame(registration_frame)
+header_frame.pack(fill="x", padx=10, pady=10)
+
+header_label = tk.Label(header_frame, text="Course Registration", 
+                        font=("Arial", 18, "bold"), 
+                        fg=PRIMARY_COLOR,
+                        bg=BACKGROUND_COLOR)
+header_label.pack(pady=10)
+
+# Middle part: Registration Status Display
+status_frame = ttk.LabelFrame(registration_frame, text="Registration Status")
+status_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Style for the treeview (already defined in the previous code)
+
 # Create treeview to display registration status
-registration_tree = ttk.Treeview(registration_frame, columns=("ID", "Student", "Registration Status"), show="headings")
+registration_tree = ttk.Treeview(status_frame, columns=("ID", "Student", "Registration Status"), show="headings", height=10)
 registration_tree.heading("ID", text="ID")
 registration_tree.heading("Student", text="Student")
 registration_tree.heading("Registration Status", text="Registration Status")
+registration_tree.column("ID", width=100)
+registration_tree.column("Student", width=250)
+registration_tree.column("Registration Status", width=150)
 registration_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Add scrollbar to treeview
+reg_scrollbar = ttk.Scrollbar(status_frame, orient="vertical", command=registration_tree.yview)
+registration_tree.configure(yscrollcommand=reg_scrollbar.set)
+reg_scrollbar.place(relx=1, rely=0, relheight=1, anchor='ne')
 
 def refresh_registration_tree():
     # Clear existing data
@@ -830,7 +1123,14 @@ def refresh_registration_tree():
     for student_id, name in students:
         registration_file = f"registration_{student_id}.txt"
         status = "Completed" if os.path.exists(registration_file) else "Not Registered"
-        registration_tree.insert("", "end", values=(student_id, name, status))
+        
+        # Add color indicator based on status
+        tag = "registered" if status == "Completed" else "not_registered"
+        item_id = registration_tree.insert("", "end", values=(student_id, name, status), tags=(tag,))
+    
+    # Configure tag colors
+    registration_tree.tag_configure("registered", background="#e3f2fd")  # Light blue background for registered
+    registration_tree.tag_configure("not_registered", background="#ffebee")  # Light red background for not registered
 
 def register_courses():
     # Get selected student
@@ -846,36 +1146,74 @@ def register_courses():
     # Create registration popup
     popup = tk.Toplevel(root)
     popup.title(f"Course Registration - {student_name}")
-    popup.geometry("500x400")
+    popup.geometry("550x500")
+    popup.configure(bg=BACKGROUND_COLOR)
+    
+    # Header in popup
+    popup_header = tk.Label(popup, text=f"Register Courses for {student_name}", 
+                            font=("Arial", 14, "bold"), 
+                            fg=PRIMARY_COLOR,
+                            bg=BACKGROUND_COLOR)
+    popup_header.pack(pady=15)
     
     # Get all available courses
-    cursor.execute("SELECT course_id, course_name FROM Course")
+    cursor.execute("SELECT course_id, course_name, credits FROM Course")
     courses = cursor.fetchall()
     
-    # Create a frame for the course selection with scrollbar
-    course_frame = ttk.Frame(popup)
-    course_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    # Create a frame for the course selection
+    course_frame = ttk.LabelFrame(popup, text="Available Courses")
+    course_frame.pack(fill="both", expand=True, padx=15, pady=10)
+    
+    # Create inner frame to hold listbox and scrollbar
+    course_inner_frame = ttk.Frame(course_frame)
+    course_inner_frame.pack(fill="both", expand=True, padx=10, pady=10)
     
     # Add a scrollbar
-    scrollbar = ttk.Scrollbar(course_frame)
+    scrollbar = ttk.Scrollbar(course_inner_frame)
     scrollbar.pack(side="right", fill="y")
     
     # Create listbox with courses
-    course_listbox = tk.Listbox(course_frame, selectmode="multiple", yscrollcommand=scrollbar.set)
-    for course_id, course_name in courses:
-        course_listbox.insert(tk.END, f"{course_id} - {course_name}")
+    course_listbox = tk.Listbox(course_inner_frame, 
+                               selectmode="multiple", 
+                               yscrollcommand=scrollbar.set,
+                               font=("Arial", 11),
+                               bg="white",
+                               highlightthickness=1,
+                               highlightbackground="#ccc",
+                               selectbackground=PRIMARY_COLOR,
+                               selectforeground="white",
+                               height=12)
+    
+    for course_id, course_name, credits in courses:
+        course_listbox.insert(tk.END, f"{course_id} - {course_name} ({credits} credits)")
+    
     course_listbox.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=course_listbox.yview)
     
     # Add semester selection
-    semester_frame = ttk.Frame(popup)
-    semester_frame.pack(fill="x", padx=10, pady=5)
+    semester_frame = ttk.LabelFrame(popup, text="Semester Information")
+    semester_frame.pack(fill="x", padx=15, pady=10)
     
-    ttk.Label(semester_frame, text="Semester:").pack(side="left", padx=5)
+    semester_inner_frame = ttk.Frame(semester_frame)
+    semester_inner_frame.pack(fill="x", padx=10, pady=10)
+    
+    ttk.Label(semester_inner_frame, text="Select Semester:", font=("Arial", 11)).pack(side="left", padx=5)
     semester_var = tk.StringVar()
-    semester_combo = ttk.Combobox(semester_frame, textvariable=semester_var, values=["1", "2", "3", "4", "5", "6", "7", "8"], state="readonly")
+    semester_combo = ttk.Combobox(semester_inner_frame, 
+                                 textvariable=semester_var, 
+                                 values=["1", "2", "3", "4", "5", "6", "7", "8"], 
+                                 state="readonly",
+                                 width=10)
     semester_combo.pack(side="left", padx=5)
     semester_combo.current(0)
+    
+    # Add note about selection
+    note_label = tk.Label(popup, 
+                        text="Note: Hold Ctrl key to select multiple courses", 
+                        font=("Arial", 10, "italic"),
+                        fg="#555",
+                        bg=BACKGROUND_COLOR)
+    note_label.pack(pady=5)
     
     def save_registration():
         selected_indices = course_listbox.curselection()
@@ -908,10 +1246,31 @@ def register_courses():
     
     # Add buttons
     button_frame = ttk.Frame(popup)
-    button_frame.pack(fill="x", padx=10, pady=10)
+    button_frame.pack(fill="x", padx=15, pady=15)
     
-    ttk.Button(button_frame, text="Register", command=save_registration).pack(side="right", padx=5)
-    ttk.Button(button_frame, text="Cancel", command=popup.destroy).pack(side="right", padx=5)
+    # Register button (blue)
+    register_button = tk.Button(button_frame, 
+                            text="Register", 
+                            command=save_registration,
+                            bg=PRIMARY_COLOR,
+                            fg="white",
+                            font=("Arial", 11, "bold"),
+                            padx=15,
+                            pady=5,
+                            borderwidth=0)
+    register_button.pack(side="right", padx=5)
+    
+    # Cancel button (grey)
+    cancel_button = tk.Button(button_frame, 
+                            text="Cancel", 
+                            command=popup.destroy,
+                            bg=SECONDARY_COLOR,
+                            fg=TEXT_COLOR,
+                            font=("Arial", 11),
+                            padx=15,
+                            pady=5,
+                            borderwidth=0)
+    cancel_button.pack(side="right", padx=5)
 
 def view_registration():
     # Get selected student
@@ -932,16 +1291,35 @@ def view_registration():
     # Display registration details
     popup = tk.Toplevel(root)
     popup.title(f"Registration Details - {student_name}")
-    popup.geometry("400x300")
+    popup.geometry("500x400")
+    popup.configure(bg=BACKGROUND_COLOR)
     
-    # Create text widget with scrollbar
-    text_frame = ttk.Frame(popup)
-    text_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    # Header
+    popup_header = tk.Label(popup, text=f"Registration Details for {student_name}", 
+                            font=("Arial", 14, "bold"), 
+                            fg=PRIMARY_COLOR,
+                            bg=BACKGROUND_COLOR)
+    popup_header.pack(pady=15)
     
-    scrollbar = ttk.Scrollbar(text_frame)
+    # Create text widget with scrollbar in a frame
+    text_frame = ttk.LabelFrame(popup, text="Course Registration Information")
+    text_frame.pack(fill="both", expand=True, padx=15, pady=10)
+    
+    text_inner_frame = ttk.Frame(text_frame)
+    text_inner_frame.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    scrollbar = ttk.Scrollbar(text_inner_frame)
     scrollbar.pack(side="right", fill="y")
     
-    text_widget = tk.Text(text_frame, wrap="word", yscrollcommand=scrollbar.set)
+    text_widget = tk.Text(text_inner_frame, 
+                        wrap="word", 
+                        yscrollcommand=scrollbar.set,
+                        font=("Arial", 11),
+                        bg="white",
+                        highlightthickness=1,
+                        highlightbackground="#ccc",
+                        padx=10,
+                        pady=10)
     
     with open(registration_file, "r") as f:
         content = f.read()
@@ -951,7 +1329,17 @@ def view_registration():
     text_widget.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=text_widget.yview)
     
-    ttk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+    # Close button
+    close_button = tk.Button(popup, 
+                            text="Close", 
+                            command=popup.destroy,
+                            bg=SECONDARY_COLOR,
+                            fg=TEXT_COLOR,
+                            font=("Arial", 11),
+                            padx=20,
+                            pady=5,
+                            borderwidth=0)
+    close_button.pack(pady=15)
 
 def delete_registration():
     # Get selected student
@@ -974,21 +1362,75 @@ def delete_registration():
         refresh_registration_tree()
         messagebox.showinfo("Registration Deleted", f"Registration for {student_name} has been deleted.")
 
-# Create buttons
-button_frame = ttk.Frame(registration_frame)
-button_frame.pack(fill="x", padx=10, pady=5)
+# Create action buttons in a dedicated frame
+action_frame = ttk.LabelFrame(registration_frame, text="Actions")
+action_frame.pack(fill="x", padx=10, pady=10)
 
-ttk.Button(button_frame, text="Register Courses", command=register_courses).pack(side="left", padx=5)
-ttk.Button(button_frame, text="View Registration", command=view_registration).pack(side="left", padx=5)
-ttk.Button(button_frame, text="Delete Registration", command=delete_registration).pack(side="left", padx=5)
-ttk.Button(button_frame, text="Refresh", command=refresh_registration_tree).pack(side="left", padx=5)
+button_frame = ttk.Frame(action_frame)
+button_frame.pack(fill="x", padx=10, pady=10)
 
+# Register Courses button (blue)
+register_button = tk.Button(button_frame, 
+                            text="Register Courses", 
+                            command=register_courses,
+                            bg=PRIMARY_COLOR,
+                            fg="white",
+                            font=("Arial", 11, "bold"),
+                            padx=10,
+                            pady=5,
+                            borderwidth=0)
+register_button.pack(side="left", padx=5)
 
+# View Registration button (blue)
+view_button = tk.Button(button_frame, 
+                        text="View Registration", 
+                        command=view_registration,
+                        bg=PRIMARY_COLOR,
+                        fg="white",
+                        font=("Arial", 11, "bold"),
+                        padx=10,
+                        pady=5,
+                        borderwidth=0)
+view_button.pack(side="left", padx=5)
+
+# Delete Registration button (with red accent for caution)
+delete_button = tk.Button(button_frame, 
+                        text="Delete Registration", 
+                        command=delete_registration,
+                        bg="#f44336",  # Red for danger
+                        fg="white",
+                        font=("Arial", 11, "bold"),
+                        padx=10,
+                        pady=5,
+                        borderwidth=0)
+delete_button.pack(side="left", padx=5)
+
+# Refresh button (grey)
+refresh_button = tk.Button(button_frame, 
+                        text="Refresh", 
+                        command=refresh_registration_tree,
+                        bg=SECONDARY_COLOR,
+                        fg=TEXT_COLOR,
+                        font=("Arial", 11),
+                        padx=10,
+                        pady=5,
+                        borderwidth=0)
+refresh_button.pack(side="left", padx=5)
+
+# Help note
+help_frame = ttk.Frame(registration_frame)
+help_frame.pack(fill="x", padx=10, pady=5)
+
+help_text = "Select a student from the list and use the buttons above to manage course registrations."
+help_label = tk.Label(help_frame, 
+                    text=help_text, 
+                    font=("Arial", 10, "italic"),
+                    fg="#555",
+                    bg=BACKGROUND_COLOR)
+help_label.pack(side="left", padx=10)
 
 # Initialize the registration tree
 refresh_registration_tree()
-
-
 
 # -------------
 # CGPA Calculator Tab
@@ -997,11 +1439,32 @@ refresh_registration_tree()
 calculator_frame = ttk.Frame(notebook)
 notebook.add(calculator_frame, text="CGPA Calculator")
 
+# Top part: Header
+header_frame = ttk.Frame(calculator_frame)
+header_frame.pack(fill="x", padx=10, pady=10)
+
+header_label = tk.Label(header_frame, text="CGPA Calculator", 
+                        font=("Arial", 18, "bold"), 
+                        fg=PRIMARY_COLOR,
+                        bg=BACKGROUND_COLOR)
+header_label.pack(pady=10)
+
 # Top part: Student Selection
 calc_top_frame = ttk.Frame(calculator_frame)
 calc_top_frame.pack(fill="x", padx=10, pady=10)
 
-tk.Label(calc_top_frame, text="Select Student:").pack(side="left", padx=5)
+# Create a styled frame for student selection
+selection_frame = ttk.LabelFrame(calc_top_frame, text="Student Selection")
+selection_frame.pack(fill="x", padx=5, pady=5)
+
+selection_inner_frame = ttk.Frame(selection_frame)
+selection_inner_frame.pack(fill="x", padx=10, pady=10)
+
+tk.Label(selection_inner_frame, text="Select Student:", 
+        bg=BACKGROUND_COLOR, 
+        fg=TEXT_COLOR,
+        font=("Arial", 11)).pack(side="left", padx=5)
+
 student_var = tk.StringVar()
 
 # Function to fetch and populate student list
@@ -1013,9 +1476,9 @@ def populate_student_list():
     return student_choices
 
 # Create the dropdown but we'll populate it later
-student_menu = ttk.Combobox(calc_top_frame, textvariable=student_var, 
-                      width=30, state="readonly")
-student_menu.pack(side="left", padx=5)
+student_menu = ttk.Combobox(selection_inner_frame, textvariable=student_var, 
+                        width=30, state="readonly")
+student_menu.pack(side="left", padx=5, fill="x", expand=True)
 
 # Initial population of the dropdown
 student_choices = populate_student_list()
@@ -1024,27 +1487,67 @@ student_choices = populate_student_list()
 results_frame = ttk.LabelFrame(calculator_frame, text="GPA Results")
 results_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
+# Style for the treeview
+style.configure("Treeview", 
+                background="white", 
+                foreground=TEXT_COLOR, 
+                rowheight=25,
+                fieldbackground="white")
+style.map("Treeview", background=[("selected", PRIMARY_COLOR)])
+style.configure("Treeview.Heading", 
+                background=ACCENT_COLOR, 
+                foreground=TEXT_COLOR, 
+                font=("Arial", 10, "bold"))
+
 # Create a treeview for semester-wise SGPA
-sgpa_tree = ttk.Treeview(results_frame, columns=("Semester", "SGPA", "Credits"), show="headings")
+sgpa_tree = ttk.Treeview(results_frame, columns=("Semester", "SGPA", "Credits"), show="headings", height=6)
 sgpa_tree.heading("Semester", text="Semester")
 sgpa_tree.heading("SGPA", text="SGPA")
 sgpa_tree.heading("Credits", text="Credits")
+sgpa_tree.column("Semester", width=150)
+sgpa_tree.column("SGPA", width=150)
+sgpa_tree.column("Credits", width=150)
 sgpa_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Add scrollbar to treeview
+scrollbar = ttk.Scrollbar(results_frame, orient="vertical", command=sgpa_tree.yview)
+sgpa_tree.configure(yscrollcommand=scrollbar.set)
+scrollbar.place(relx=1, rely=0, relheight=1, anchor='ne')
 
 # CGPA Display
 cgpa_frame = ttk.Frame(results_frame)
-cgpa_frame.pack(fill="x", padx=10, pady=5)
+cgpa_frame.pack(fill="x", padx=10, pady=15)
 
-cgpa_label = tk.Label(cgpa_frame, text="CGPA: ", font=("Arial", 14, "bold"))
+# Style the CGPA display with a box
+cgpa_display_frame = tk.Frame(cgpa_frame, bg=ACCENT_COLOR, bd=1, relief="solid")
+cgpa_display_frame.pack(fill="x", pady=5)
+
+cgpa_inner_frame = tk.Frame(cgpa_display_frame, bg=ACCENT_COLOR, pady=10, padx=10)
+cgpa_inner_frame.pack(fill="x")
+
+cgpa_label = tk.Label(cgpa_inner_frame, text="CGPA: ", 
+                    font=("Arial", 14, "bold"), 
+                    bg=ACCENT_COLOR,
+                    fg=TEXT_COLOR)
 cgpa_label.pack(side="left")
 
-cgpa_value = tk.Label(cgpa_frame, text="--", font=("Arial", 14))
+cgpa_value = tk.Label(cgpa_inner_frame, text="--", 
+                    font=("Arial", 14), 
+                    bg=ACCENT_COLOR,
+                    fg=PRIMARY_COLOR)
 cgpa_value.pack(side="left")
 
-total_credits_label = tk.Label(cgpa_frame, text="Total Credits: ", font=("Arial", 12), padx=20)
+total_credits_label = tk.Label(cgpa_inner_frame, text="Total Credits: ", 
+                            font=("Arial", 12, "bold"), 
+                            bg=ACCENT_COLOR,
+                            fg=TEXT_COLOR, 
+                            padx=20)
 total_credits_label.pack(side="left")
 
-total_credits_value = tk.Label(cgpa_frame, text="--", font=("Arial", 12))
+total_credits_value = tk.Label(cgpa_inner_frame, text="--", 
+                            font=("Arial", 12), 
+                            bg=ACCENT_COLOR,
+                            fg=PRIMARY_COLOR)
 total_credits_value.pack(side="left")
 
 def calculate_cgpa():
@@ -1091,7 +1594,7 @@ def calculate_cgpa():
             semester_sgpas.append(sgpa)
             sgpa_tree.insert("", "end", values=(f"Semester {semester}", f"{sgpa:.2f}", total_credits))
     
-    # Calculate CGPA using the formula from the image
+    # Calculate CGPA
     total_weighted_sgpa = sum(sgpa * credits for sgpa, credits in zip(semester_sgpas, semester_credits))
     total_all_credits = sum(semester_credits)
     
@@ -1126,12 +1629,35 @@ def refresh_calculator():
 calc_button_frame = ttk.Frame(calculator_frame)
 calc_button_frame.pack(pady=10)
 
-ttk.Button(calc_button_frame, text="Calculate CGPA", command=calculate_cgpa).pack(side="left", padx=5)
-ttk.Button(calc_button_frame, text="Refresh", command=refresh_calculator).pack(side="left", padx=5)
+# Style the buttons
+calculate_button = tk.Button(calc_button_frame, 
+                            text="Calculate CGPA", 
+                            command=calculate_cgpa,
+                            bg=PRIMARY_COLOR,
+                            fg="white",
+                            font=("Arial", 11, "bold"),
+                            padx=10,
+                            pady=5,
+                            borderwidth=0)
+calculate_button.pack(side="left", padx=5)
+
+refresh_button = tk.Button(calc_button_frame, 
+                        text="Refresh", 
+                        command=refresh_calculator,
+                        bg=SECONDARY_COLOR,
+                        fg=TEXT_COLOR,
+                        font=("Arial", 11),
+                        padx=10,
+                        pady=5,
+                        borderwidth=0)
+refresh_button.pack(side="left", padx=5)
 
 # Formula display
 formula_frame = ttk.LabelFrame(calculator_frame, text="Formula Reference")
 formula_frame.pack(fill="x", padx=10, pady=10)
+
+formula_box = tk.Frame(formula_frame, bg="white", bd=1, relief="solid")
+formula_box.pack(fill="x", padx=5, pady=5)
 
 formula_text = """
 SGPA Formula: SGPA = Σ(Credits × Grade Points) / Σ(Credits)
@@ -1143,7 +1669,15 @@ Where:
 - SGPA: Semester Grade Point Average
 - CGPA: Cumulative Grade Point Average
 """
-tk.Label(formula_frame, text=formula_text, justify="left").pack(padx=10, pady=10)
+formula_label = tk.Label(formula_box, 
+                        text=formula_text, 
+                        justify="left", 
+                        bg="white", 
+                        fg=TEXT_COLOR,
+                        font=("Arial", 10),
+                        padx=10, 
+                        pady=10)
+formula_label.pack()
 # -----------------------------
 # Main loop
 # -----------------------------
