@@ -58,18 +58,44 @@ style.configure("TNotebook.Tab", background=SECONDARY_COLOR, padding=[10, 5])
 style.configure("TFrame", background=BACKGROUND_COLOR)
 style.configure("TLabelframe", background=BACKGROUND_COLOR)
 style.configure("TLabelframe.Label", background=BACKGROUND_COLOR, foreground=PRIMARY_COLOR, font=("Arial", 11, "bold"))
-style.configure("TButton", background=PRIMARY_COLOR, foreground="white", font=("Arial", 10, "bold"))
+style.configure("TButton", background=PRIMARY_COLOR, foreground=WHITE, font=("Arial", 10), padx=10, pady=10)
+# -------------
+# Student Tab
+# -------------
 # -------------
 # Student Tab
 # -------------
 
+# Student Tab Configuration
 student_frame = ttk.Frame(notebook)
 notebook.add(student_frame, text="Students")
 
-student_tree = ttk.Treeview(student_frame, columns=("ID", "Name", "Email"), show="headings")
-for col in ("ID", "Name", "Email"):
-    student_tree.heading(col, text=col)
-student_tree.pack(fill="both", expand=True, padx=10, pady=10)
+# Create a header frame
+header_frame = ttk.Frame(student_frame, style="TFrame")
+header_frame.pack(fill="x", padx=10, pady=(10, 5))
+
+header_label = ttk.Label(header_frame, text="Student Management", font=("Arial", 14, "bold"), foreground=PRIMARY_COLOR)
+header_label.pack(side="left")
+
+# Treeview with custom styling
+student_tree_frame = ttk.Frame(student_frame, style="TFrame")
+student_tree_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+student_tree = ttk.Treeview(student_tree_frame, columns=("ID", "Name", "Email"), show="headings")
+student_tree.heading("ID", text="ID")
+student_tree.heading("Name", text="Name")
+student_tree.heading("Email", text="Email")
+
+# Adjust column widths
+student_tree.column("ID", width=50, anchor="center")
+student_tree.column("Name", width=200)
+student_tree.column("Email", width=250)
+
+# Add a scrollbar
+scrollbar = ttk.Scrollbar(student_tree_frame, orient="vertical", command=student_tree.yview)
+student_tree.configure(yscrollcommand=scrollbar.set)
+scrollbar.pack(side="right", fill="y")
+student_tree.pack(side="left", fill="both", expand=True)
 
 def refresh_student_tree():
     for row in student_tree.get_children():
@@ -81,13 +107,25 @@ def refresh_student_tree():
 def add_student():
     popup = tk.Toplevel(root)
     popup.title("Add Student")
+    popup.configure(bg=BACKGROUND_COLOR)
+    popup.grab_set()  # Modal dialog
+    
+    # Center the popup
+    popup_width, popup_height = 350, 180
+    x = root.winfo_x() + (root.winfo_width() - popup_width) // 2
+    y = root.winfo_y() + (root.winfo_height() - popup_height) // 2
+    popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+    
+    # Create a frame for the form with padding
+    form_frame = ttk.Frame(popup)
+    form_frame.pack(padx=20, pady=20, fill="both", expand=True)
 
-    tk.Label(popup, text="Name:").grid(row=0, column=0, padx=5, pady=5)
-    name_entry = tk.Entry(popup)
+    ttk.Label(form_frame, text="Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    name_entry = ttk.Entry(form_frame, width=25)
     name_entry.grid(row=0, column=1, padx=5, pady=5)
 
-    tk.Label(popup, text="Email:").grid(row=1, column=0, padx=5, pady=5)
-    email_entry = tk.Entry(popup)
+    ttk.Label(form_frame, text="Email:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    email_entry = ttk.Entry(form_frame, width=25)
     email_entry.grid(row=1, column=1, padx=5, pady=5)
 
     def submit():
@@ -105,7 +143,16 @@ def add_student():
         else:
             messagebox.showwarning("Input Error", "All fields are required.")
 
-    tk.Button(popup, text="Add", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+    # Button frame for better spacing
+    button_frame = ttk.Frame(form_frame)
+    button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+    
+    # Create styled buttons
+    add_button = tk.Button(button_frame, text="Add", command=submit, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    add_button.pack(side="left", padx=5)
+    
+    cancel_button = tk.Button(button_frame, text="Cancel", command=popup.destroy,bg="#f44336", fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    cancel_button.pack(side="left", padx=5)
 
 def update_student():
     selected = student_tree.focus()
@@ -117,14 +164,26 @@ def update_student():
     
     popup = tk.Toplevel(root)
     popup.title("Update Student")
+    popup.configure(bg=BACKGROUND_COLOR)
+    popup.grab_set()  # Modal dialog
     
-    tk.Label(popup, text="Name:").grid(row=0, column=0, padx=5, pady=5)
-    name_entry = tk.Entry(popup)
+    # Center the popup
+    popup_width, popup_height = 350, 180
+    x = root.winfo_x() + (root.winfo_width() - popup_width) // 2
+    y = root.winfo_y() + (root.winfo_height() - popup_height) // 2
+    popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+    
+    # Create a frame for the form with padding
+    form_frame = ttk.Frame(popup)
+    form_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    ttk.Label(form_frame, text="Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    name_entry = ttk.Entry(form_frame, width=25)
     name_entry.insert(0, record[1])
     name_entry.grid(row=0, column=1, padx=5, pady=5)
 
-    tk.Label(popup, text="Email:").grid(row=1, column=0, padx=5, pady=5)
-    email_entry = tk.Entry(popup)
+    ttk.Label(form_frame, text="Email:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    email_entry = ttk.Entry(form_frame, width=25)
     email_entry.insert(0, record[2])
     email_entry.grid(row=1, column=1, padx=5, pady=5)
 
@@ -143,7 +202,16 @@ def update_student():
         else:
             messagebox.showwarning("Input Error", "All fields are required.")
 
-    tk.Button(popup, text="Update", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+    # Button frame for better spacing
+    button_frame = ttk.Frame(form_frame)
+    button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+    
+    # Create styled buttons
+    update_button = tk.Button(button_frame, text="Update", command=submit, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    update_button.pack(side="left", padx=5)
+    
+    cancel_button = tk.Button(button_frame, text="Cancel", command=popup.destroy, bg="#f44336", fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    cancel_button.pack(side="left", padx=5)
 
 def delete_student():
     selected = student_tree.focus()
@@ -152,34 +220,71 @@ def delete_student():
         return
     record = student_tree.item(selected, "values")
     student_id = record[0]
-    if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this student?"):
+    if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete student '{record[1]}'?"):
         cursor.execute("DELETE FROM Student WHERE student_id=?", (student_id,))
         conn.commit()
         refresh_student_tree()
 
-# Buttons for Student Tab
-student_button_frame = ttk.Frame(student_frame)
-student_button_frame.pack(pady=5)
+# Buttons for Student Tab with styling
+student_button_frame = ttk.Frame(student_frame, style="TFrame")
+student_button_frame.pack(fill="x", padx=10, pady=10)
 
-ttk.Button(student_button_frame, text="Add Student", command=add_student).pack(side="left", padx=5)
-ttk.Button(student_button_frame, text="Update Student", command=update_student).pack(side="left", padx=5)
-ttk.Button(student_button_frame, text="Delete Student", command=delete_student).pack(side="left", padx=5)
+# Add separator above buttons
+separator = ttk.Separator(student_frame, orient='horizontal')
+separator.pack(fill='x', padx=10, pady=(0, 10))
 
+# Create buttons with improved styling
+add_button = tk.Button(student_button_frame, text="Add Student", command=add_student, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+add_button.pack(side="left", padx=5)
+
+update_button = tk.Button(student_button_frame, text="Update Student", command=update_student, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+update_button.pack(side="left", padx=5)
+
+delete_button = tk.Button(student_button_frame, text="Delete Student", command=delete_student, bg="#f44336", fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+delete_button.pack(side="left", padx=5)
+
+refresh_button = tk.Button(student_button_frame, text="Refresh", command=refresh_student_tree, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+refresh_button.pack(side="right", padx=5)
+
+# Initialize the student list
 refresh_student_tree()
 
 # -------------
 # Course Tab
 # -------------
 
+# Course Tab Configuration
 course_frame = ttk.Frame(notebook)
 notebook.add(course_frame, text="Courses")
 
-course_tree = ttk.Treeview(course_frame, columns=("ID", "Course Name", "Credits", "Professor"), show="headings")
+# Create a header frame
+header_frame = ttk.Frame(course_frame, style="TFrame")
+header_frame.pack(fill="x", padx=10, pady=(10, 5))
+
+header_label = ttk.Label(header_frame, text="Course Management", font=("Arial", 14, "bold"), foreground=PRIMARY_COLOR)
+header_label.pack(side="left")
+
+# Treeview with custom styling
+course_tree_frame = ttk.Frame(course_frame, style="TFrame")
+course_tree_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+course_tree = ttk.Treeview(course_tree_frame, columns=("ID", "Course Name", "Credits", "Professor"), show="headings")
 course_tree.heading("ID", text="ID")
 course_tree.heading("Course Name", text="Course Name")
 course_tree.heading("Credits", text="Credits")
 course_tree.heading("Professor", text="Professor")
-course_tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+# Adjust column widths
+course_tree.column("ID", width=50, anchor="center")
+course_tree.column("Course Name", width=200)
+course_tree.column("Credits", width=70, anchor="center")
+course_tree.column("Professor", width=180)
+
+# Add a scrollbar
+scrollbar = ttk.Scrollbar(course_tree_frame, orient="vertical", command=course_tree.yview)
+course_tree.configure(yscrollcommand=scrollbar.set)
+scrollbar.pack(side="right", fill="y")
+course_tree.pack(side="left", fill="both", expand=True)
 
 def refresh_course_tree():
     for row in course_tree.get_children():
@@ -197,23 +302,35 @@ def refresh_course_tree():
 def add_course():
     popup = tk.Toplevel(root)
     popup.title("Add Course")
-
-    tk.Label(popup, text="Course Name:").grid(row=0, column=0, padx=5, pady=5)
-    course_entry = tk.Entry(popup)
+    popup.configure(bg=BACKGROUND_COLOR)
+    popup.grab_set()  # Modal dialog
+    
+    # Center the popup
+    popup_width, popup_height = 350, 200
+    x = root.winfo_x() + (root.winfo_width() - popup_width) // 2
+    y = root.winfo_y() + (root.winfo_height() - popup_height) // 2
+    popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+    
+    # Create a frame for the form with padding
+    form_frame = ttk.Frame(popup)
+    form_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    ttk.Label(form_frame, text="Course Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    course_entry = ttk.Entry(form_frame, width=25)
     course_entry.grid(row=0, column=1, padx=5, pady=5)
     
-    tk.Label(popup, text="Credits:").grid(row=1, column=0, padx=5, pady=5)
-    credits_entry = tk.Entry(popup)
+    ttk.Label(form_frame, text="Credits:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    credits_entry = ttk.Entry(form_frame, width=25)
     credits_entry.grid(row=1, column=1, padx=5, pady=5)
     
-    tk.Label(popup, text="Professor:").grid(row=2, column=0, padx=5, pady=5)
+    ttk.Label(form_frame, text="Professor:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
     
     # Get all professors for dropdown
     cursor.execute("SELECT professor_id, first_name || ' ' || last_name as full_name FROM Professor ORDER BY last_name, first_name")
     professors = [("", "-- Select Professor --")] + [(str(row[0]), row[1]) for row in cursor.fetchall()]
     
     professor_var = tk.StringVar()
-    professor_dropdown = ttk.Combobox(popup, textvariable=professor_var, state="readonly")
+    professor_dropdown = ttk.Combobox(form_frame, textvariable=professor_var, state="readonly", width=23)
     professor_dropdown['values'] = [prof[1] for prof in professors]
     professor_dropdown.current(0)
     professor_dropdown.grid(row=2, column=1, padx=5, pady=5)
@@ -245,8 +362,17 @@ def add_course():
                 messagebox.showwarning("Input Error", "Credits must be a number.")
         else:
             messagebox.showwarning("Input Error", "Course name and credits are required.")
-
-    tk.Button(popup, text="Add", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+    
+    # Button frame for better spacing
+    button_frame = ttk.Frame(form_frame)
+    button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+    
+    # Create styled buttons
+    add_button = tk.Button(button_frame, text="Add", command=submit, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    add_button.pack(side="left", padx=5)
+    
+    cancel_button = tk.Button(button_frame, text="Cancel", command=popup.destroy, bg="#f44336", fg=WHITE, font=("Arial", 10), padx=10, pady=10 , width=10)
+    cancel_button.pack(side="left", padx=5)
 
 def update_course():
     selected = course_tree.focus()
@@ -258,25 +384,37 @@ def update_course():
     
     popup = tk.Toplevel(root)
     popup.title("Update Course")
+    popup.configure(bg=BACKGROUND_COLOR)
+    popup.grab_set()  # Modal dialog
     
-    tk.Label(popup, text="Course Name:").grid(row=0, column=0, padx=5, pady=5)
-    course_entry = tk.Entry(popup)
+    # Center the popup
+    popup_width, popup_height = 350, 200
+    x = root.winfo_x() + (root.winfo_width() - popup_width) // 2
+    y = root.winfo_y() + (root.winfo_height() - popup_height) // 2
+    popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+    
+    # Create a frame for the form with padding
+    form_frame = ttk.Frame(popup)
+    form_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    
+    ttk.Label(form_frame, text="Course Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    course_entry = ttk.Entry(form_frame, width=25)
     course_entry.insert(0, record[1])
     course_entry.grid(row=0, column=1, padx=5, pady=5)
     
-    tk.Label(popup, text="Credits:").grid(row=1, column=0, padx=5, pady=5)
-    credits_entry = tk.Entry(popup)
+    ttk.Label(form_frame, text="Credits:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+    credits_entry = ttk.Entry(form_frame, width=25)
     credits_entry.insert(0, record[2])
     credits_entry.grid(row=1, column=1, padx=5, pady=5)
     
-    tk.Label(popup, text="Professor:").grid(row=2, column=0, padx=5, pady=5)
+    ttk.Label(form_frame, text="Professor:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
     
     # Get all professors for dropdown
     cursor.execute("SELECT professor_id, first_name || ' ' || last_name as full_name FROM Professor ORDER BY last_name, first_name")
     professors = [("", "-- Select Professor --")] + [(str(row[0]), row[1]) for row in cursor.fetchall()]
     
     professor_var = tk.StringVar()
-    professor_dropdown = ttk.Combobox(popup, textvariable=professor_var, state="readonly")
+    professor_dropdown = ttk.Combobox(form_frame, textvariable=professor_var, state="readonly", width=23)
     professor_dropdown['values'] = [prof[1] for prof in professors]
     
     # Get current professor for this course
@@ -328,7 +466,16 @@ def update_course():
         else:
             messagebox.showwarning("Input Error", "Course name and credits are required.")
 
-    tk.Button(popup, text="Update", command=submit).grid(row=3, column=0, columnspan=2, pady=10)
+    # Button frame for better spacing
+    button_frame = ttk.Frame(form_frame)
+    button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+    
+    # Create styled buttons
+    update_button = tk.Button(button_frame, text="Update", command=submit, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+    update_button.pack(side="left", padx=5)
+    
+    cancel_button = tk.Button(button_frame, text="Cancel", command=popup.destroy, bg="#f44336", font=("Arial", 10), padx=10, pady=10, width=10)
+    cancel_button.pack(side="left", padx=5)
 
 def delete_course():
     selected = course_tree.focus()
@@ -337,21 +484,36 @@ def delete_course():
         return
     record = course_tree.item(selected, "values")
     course_id = record[0]
-    if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this course?"):
+    if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete course '{record[1]}'?"):
         # Delete from CourseAssignment first due to foreign key constraints
         cursor.execute("DELETE FROM CourseAssignment WHERE course_id=?", (course_id,))
         cursor.execute("DELETE FROM Course WHERE course_id=?", (course_id,))
         conn.commit()
         refresh_course_tree()
 
-# Buttons for Course Tab
-course_button_frame = ttk.Frame(course_frame)
-course_button_frame.pack(pady=5)
+# Buttons for Course Tab with styling
+course_button_frame = ttk.Frame(course_frame, style="TFrame")
+course_button_frame.pack(fill="x", padx=10, pady=10)
 
-ttk.Button(course_button_frame, text="Add Course", command=add_course).pack(side="left", padx=5)
-ttk.Button(course_button_frame, text="Update Course", command=update_course).pack(side="left", padx=5)
-ttk.Button(course_button_frame, text="Delete Course", command=delete_course).pack(side="left", padx=5)
+# Add separator above buttons
+separator = ttk.Separator(course_frame, orient='horizontal')
+separator.pack(fill='x', padx=10, pady=(0, 10))
 
+# Create buttons with improved styling
+add_button = tk.Button(course_button_frame, text="Add Course", command=add_course, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+add_button.pack(side="left", padx=5)
+
+update_button = tk.Button(course_button_frame, text="Update Course", command=update_course, bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+update_button.pack(side="left", padx=5)
+
+delete_button = tk.Button(course_button_frame, text="Delete Course", command=delete_course,bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=15)
+delete_button.pack(side="left", padx=5)
+
+refresh_button = tk.Button(course_button_frame, text="Refresh", command=refresh_course_tree,bg=PRIMARY_COLOR, fg=WHITE, font=("Arial", 10), padx=10, pady=10, width=10)
+refresh_button.pack(side="right", padx=5)
+
+# Initialize the course list
+refresh_course_tree()
 
 # -------------
 # Professor Tab
@@ -449,7 +611,7 @@ def add_professor():
     add_btn = tk.Button(button_frame, text="Add", bg=PRIMARY_COLOR, fg=WHITE, command=submit, padx=10)
     add_btn.pack(side="right", padx=5)
     
-    cancel_btn = tk.Button(button_frame, text="Cancel", bg=SECONDARY_COLOR, fg=TEXT_COLOR, command=popup.destroy, padx=10)
+    cancel_btn = tk.Button(button_frame, text="Cancel", bg="#f44336", fg=TEXT_COLOR, command=popup.destroy, padx=10)
     cancel_btn.pack(side="right", padx=5)
 
 
@@ -586,7 +748,7 @@ def update_professor():
     update_btn = tk.Button(button_frame, text="Update", bg=PRIMARY_COLOR, fg=WHITE, command=submit, padx=10)
     update_btn.pack(side="right", padx=5)
     
-    cancel_btn = tk.Button(button_frame, text="Cancel", bg=SECONDARY_COLOR, fg=TEXT_COLOR, command=popup.destroy, padx=10)
+    cancel_btn = tk.Button(button_frame, text="Cancel", bg="#f44336", fg=TEXT_COLOR, command=popup.destroy, padx=10)
     cancel_btn.pack(side="right", padx=5)
 
 
@@ -962,7 +1124,7 @@ def enter_grades():
                           font=("Arial", 10), padx=10, pady=2, bd=0, command=save_grades)
     save_button.pack(side="right", padx=5)
     
-    cancel_button = tk.Button(button_frame, text="Cancel", bg="#d3d3d3", fg="black",
+    cancel_button = tk.Button(button_frame, text="Cancel", bg="#f44336", fg="black",
                             font=("Arial", 10), padx=10, pady=2, bd=0, command=popup.destroy)
     cancel_button.pack(side="right", padx=5)
 
